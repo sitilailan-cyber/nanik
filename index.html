@@ -1,0 +1,1778 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Template MPI</title>
+<style>
+  /* ====== KONFIGURASI WARNA ====== */
+  :root {
+  --primary: #E63946; 
+  --primary-tua: #B30000;
+  --accent: #FFD166;
+  --accent-tua: #F4A261;
+  --tinta: #1D3557;
+  --krem: #FFFFFF;
+  --krem-2: #FFFDF5; 
+  --garis: #FFD166;
+  --hijau: #2ECC71;
+  --hijau-tua: #27AE60;
+  --salah: #E74C3C; 
+  --biru-muda: #A8DADC;
+  --bayang: 0 16px 32px rgba(230, 57, 70, 0.15);
+  --bayang-kecil: 0 8px 20px rgba(0, 0, 0, 0.08);
+  --ungu: #7209B7;
+  --ungu-tua: #3F37C9;
+  --toska: #2D6A4F;
+  --toska-muda: #52B788;
+}
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; width: 100%;
+    background: #DFE6E9; overflow: hidden;
+    font-family: 'Nunito', 'Segoe UI', Tahoma, system-ui, sans-serif;
+    color: var(--tinta); touch-action: manipulation;
+  }
+  #viewport { position: fixed; inset: 0; overflow: hidden; }
+  #stage {
+    position: absolute; top: 0; left: 0; width: 1280px; height: 720px;
+    transform-origin: top left; background: var(--krem-2);
+    overflow: hidden; user-select: none; border-radius: 20px;
+  }
+  .screen { position: absolute; inset: 0; display: none; flex-direction: column; }
+  .screen.active { display: flex; animation: fade .4s cubic-bezier(0.4, 0, 0.2, 1); }
+  @keyframes fade { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: none; } }
+  .bg { position: absolute; inset: 0; background-size: cover; background-position: center; z-index: 0; }
+  .bg:not(:has(img)) { background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); }
+  .bg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
+  
+  /* ====== Topbar & Navbar ====== */
+  .topbar {
+    position: relative; z-index: 5; height: 80px; flex: 0 0 80px;
+    display: flex; align-items: center; gap: 14px; padding: 0 30px;
+    background: #FFFFFF; border-bottom: 2px solid var(--garis);
+    border-radius: 0 0 40px 40px; box-shadow: var(--bayang-kecil);
+  }
+  .topbar .judul-bar { font-weight: 800; font-size: 22px; color: var(--primary-tua); }
+  .topbar .judul-bar small { display: block; font-weight: 600; font-size: 14px; opacity: 0.7; }
+  .spacer { flex: 1; }
+  .progress-wrap { display: flex; align-items: center; gap: 12px; color: var(--primary-tua); }
+  .progress-track { width: 200px; height: 16px; border-radius: 99px; background: #E2E8F0; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent-tua)); transition: width .5s ease; }
+  .progress-label { font-size: 14px; font-weight: 800; }
+  .skor-badge {
+    background: #FFF9E6; border: 3px solid #F1C40F; padding: 6px 18px;
+    border-radius: 99px; font-weight: 900; font-size: 18px; color: #856404;
+    display: flex; align-items: center; gap: 8px; box-shadow: var(--bayang-kecil);
+  }
+  .icon-btn {
+    width: 50px; height: 50px; border: none; border-radius: 50%; cursor: pointer;
+    background: var(--krem-2); color: var(--primary); font-size: 22px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; transition: all .2s; box-shadow: var(--bayang-kecil);
+  }
+  .icon-btn:active { transform: scale(.9); }
+  .content { position: relative; z-index: 4; flex: 1; padding: 25px 35px; overflow: hidden; display: flex; flex-direction: column; }
+  .navbar {
+    position: relative; z-index: 5; height: 85px; flex: 0 0 85px; display: flex; align-items: center; justify-content: space-between; padding: 0 30px;
+    background: #FFFFFF; border-top: 2px solid var(--garis); border-radius: 40px 40px 0 0; box-shadow: 0 -8px 20px rgba(0,0,0,0.03);
+  }
+  .nav-btn {
+    min-width: 190px; height: 52px; padding: 0 30px; border: none; border-radius: 99px; cursor: pointer; font-size: 18px; font-weight: 800; color: #fff;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px; box-shadow: var(--bayang-kecil); transition: all .2s;
+  }
+  .nav-btn:active { transform: translateY(2px) scale(.98); }
+  .nav-btn[disabled] { opacity: .4; cursor: not-allowed; }
+  .nav-back { background: #95A5A6; }
+  .nav-next { background: linear-gradient(135deg, var(--accent), var(--accent-tua)); }
+  .btn { border: none; border-radius: 99px; cursor: pointer; font-weight: 800; color: #fff; box-shadow: var(--bayang-kecil); transition: all .2s; }
+  .btn:active { transform: translateY(2px) scale(.96); }
+  .btn-merah { background: linear-gradient(135deg, var(--salah), #C0392B); }
+  .btn-kuning { background: linear-gradient(135deg, var(--accent), var(--accent-tua)); color: #fff; }
+  .btn-toska { background: linear-gradient(135deg, var(--toska), var(--toska-muda)); color: #fff; }
+
+  /* ====== JUDUL & MENU ====== */
+  #scr-judul .bg::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.22) 50%, rgba(0,0,0,0.55) 100%), linear-gradient(135deg, rgba(230,57,70,0.18) 0%, rgba(29,53,87,0.16) 100%); }
+  #scr-judul .bg img { opacity: 1; z-index: 0; } 
+  .judul-center { position: relative; z-index: 4; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; padding: 20px; }
+  .judul-utama { color: #FFFFFF; font-size: 60px; font-weight: 900; line-height: 1.1; margin: 10px 0 0; text-shadow: 0 2px 6px rgba(0,0,0,0.65), 0 8px 24px rgba(0,0,0,0.5); }
+  .judul-sub { color: #F1FAEE; font-size: 24px; font-weight: 700; margin: 0; text-shadow: 0 2px 6px rgba(0,0,0,0.7); }
+  .mulai-btn { margin-top: 24px; height: 75px; padding: 0 60px; font-size: 26px; border-radius: 99px; }
+  .judul-topright { position: absolute; top: 24px; right: 30px; z-index: 6; display: flex; gap: 14px; }
+  
+  #scr-menu .bg { background: linear-gradient(180deg, #FDF2E9, #F1FAEE); }
+  .menu-head { position: relative; z-index: 4; text-align: center; padding: 20px 20px 5px; }
+  .menu-head h2 { font-size: 34px; margin: 0; color: var(--primary-tua); font-weight: 900; }
+  .menu-cards { position: relative; z-index: 4; flex: 1; display: flex; gap: 18px; align-items: center; justify-content: center; padding: 15px 30px 30px; flex-wrap: wrap; }
+  .menu-card {
+    width: 215px; height: 340px; border-radius: 32px; cursor: pointer; color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12); transition: all .3s; padding: 20px 15px; text-align: center; border: 4px solid rgba(255,255,255,0.35);
+  }
+  .menu-card:hover { transform: translateY(-8px) scale(1.02); }
+  .menu-card .img-ikon { width: 85px; height: 85px; object-fit: contain; margin-bottom: 6px; filter: drop-shadow(0 6px 8px rgba(0,0,0,0.2)); }
+  .menu-card .mc-judul { font-size: 24px; font-weight: 900; }
+  .menu-card .mc-sub { font-size: 13px; font-weight: 600; background: rgba(0,0,0,0.15); padding: 6px 12px; border-radius: 99px; line-height: 1.2; }
+  .mc-belajar { background: linear-gradient(135deg, #1D3557, #457B9D); }
+  .mc-bermain { background: linear-gradient(135deg, var(--primary), var(--primary-tua)); }
+  .mc-museum { background: linear-gradient(135deg, var(--toska), var(--toska-muda)); }
+  .mc-berlatih { background: linear-gradient(135deg, var(--accent), var(--accent-tua)); }
+  .mc-refleksi { background: linear-gradient(135deg, var(--ungu), var(--ungu-tua)); }
+
+  /* ====== BELAJAR ====== */
+  .belajar-frame { flex:1; display:flex; min-height:0; background:#fff; border-radius:32px; box-shadow:var(--bayang); overflow:hidden; border:3px solid var(--garis); }
+  .belajar-img-sisi { flex:0 0 32%; max-width:32%; background:linear-gradient(160deg,#FFF6ED,#FDF2E9); display:flex; align-items:center; justify-content:center; padding:16px; border-right:3px solid var(--garis); }
+  .belajar-img-sisi img { width:100%; height:100%; max-width:100%; max-height:100%; object-fit:contain; filter:drop-shadow(0 12px 18px rgba(0,0,0,0.12)); border-radius:16px; }
+  .belajar-teks-sisi { flex:1 1 68%; padding:24px 34px; overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
+  .belajar-teks-sisi h2 { margin:0; font-size:30px; color:var(--primary-tua); font-weight:900; line-height:1.15; }
+  .belajar-intro { background:linear-gradient(135deg,var(--primary),var(--primary-tua)); color:#fff; padding:12px 20px; border-radius:18px; font-size:18px; font-weight:800; line-height:1.3; }
+  .belajar-isi { font-size:17px; line-height:1.55; color:var(--tinta); }
+  .belajar-isi ul { margin:6px 0 0; padding-left:20px; }
+  .belajar-isi li { margin-bottom:6px; }
+  .belajar-isi b { color: var(--primary-tua); }
+  
+  .belajar-box-sub { background:#F8FAFC; border:2px solid var(--garis); border-radius:16px; padding:12px 16px; margin-top:10px; }
+  .belajar-box-sub h4 { margin:0 0 8px; font-size:18px; color:var(--primary-tua); font-weight:900; display:flex; align-items:center; gap:8px; }
+  
+  .belajar-kuis { margin-top:10px; padding:14px 18px; background:var(--biru-muda); border:2px dashed var(--primary); border-radius:18px; }
+  .belajar-kuis .bk-tanya { font-weight:800; color:var(--primary-tua); font-size:17px; margin:0 0 10px; }
+  .belajar-kuis .bk-opsi { display:flex; gap:12px; flex-wrap:wrap; }
+
+  /* ====== DETEKTIF SEJARAH (C3 - MENGAPLIKASIKAN) ====== */
+  .museum-wrapper { display: flex; gap: 24px; flex: 1; min-height: 0; }
+  .museum-sidebar { flex: 0 0 340px; background: #FFFFFF; border-radius: 28px; padding: 20px; border: 3px solid var(--toska); box-shadow: var(--bayang-kecil); display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+  .museum-role-badge { background: linear-gradient(135deg, var(--toska), var(--toska-muda)); color: white; padding: 8px 16px; border-radius: 99px; font-weight: 900; font-size: 15px; text-align: center; box-shadow: var(--bayang-kecil); }
+  .museum-skenario { background: #F4FBF7; border-left: 5px solid var(--toska); padding: 12px 16px; border-radius: 12px; font-size: 15px; line-height: 1.45; color: var(--tinta); }
+  .museum-skenario b { color: var(--toska); }
+  .museum-artefak-list { display: flex; flex-direction: column; gap: 10px; }
+  .museum-artefak-card { background: #FFF; border: 3px solid var(--garis); border-radius: 18px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all .2s; }
+  .museum-artefak-card:hover { border-color: var(--toska); background: #E8F8F0; }
+  .museum-artefak-card.active { border-color: var(--toska); background: #D1F2E1; transform: scale(1.02); }
+  .museum-artefak-card.selesai { border-color: var(--hijau-tua); background: #ECFDF5; }
+  .museum-artefak-card img { width: 50px; height: 50px; object-fit: contain; border-radius: 10px; background: #fff; padding: 4px; border: 1px solid var(--garis); }
+  .museum-artefak-info { flex: 1; }
+  .museum-artefak-info .title { font-weight: 800; font-size: 15px; color: var(--tinta); }
+  .museum-artefak-info .status { font-size: 12px; font-weight: 700; color: #888; }
+  
+  .museum-main { flex: 1; background: #FFFFFF; border-radius: 28px; padding: 22px 26px; border: 3px solid var(--garis); box-shadow: var(--bayang-kecil); display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+  .museum-header-zone { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed var(--garis); padding-bottom: 10px; }
+  .museum-header-zone h3 { margin: 0; font-size: 22px; color: var(--toska); font-weight: 900; }
+  .museum-case-box { background: #FFF9E6; border: 2px solid var(--accent); border-radius: 18px; padding: 14px 18px; font-size: 16px; line-height: 1.45; color: #5D4037; }
+  .museum-case-box b { color: var(--primary-tua); }
+  
+  .museum-q-section { display: flex; flex-direction: column; gap: 10px; }
+  .museum-q-title { font-size: 17px; font-weight: 800; color: var(--tinta); }
+  .museum-opsi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .museum-opsi-btn { background: #F8FAFC; border: 2px solid var(--garis); padding: 12px 16px; border-radius: 14px; font-size: 15px; font-weight: 700; text-align: left; cursor: pointer; color: var(--tinta); transition: all 0.2s; }
+  .museum-opsi-btn:hover { border-color: var(--toska); background: #E8F8F0; }
+  .museum-opsi-btn.terpilih { border-color: var(--toska); background: #D1F2E1; color: var(--toska); font-weight: 800; }
+  .museum-opsi-btn.benar { border-color: var(--hijau-tua); background: #ECFDF5; color: var(--hijau-tua); }
+  .museum-opsi-btn.salah { border-color: var(--salah); background: #FEF2F2; color: var(--salah); }
+
+  /* ====== REFLEKSI ====== */
+  .refleksi-container { background: #FFF; border-radius: 28px; padding: 25px 35px; border: 3px solid var(--ungu); box-shadow: var(--bayang); flex: 1; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
+  .refleksi-head { text-align: center; border-bottom: 2px dashed var(--ungu); padding-bottom: 12px; }
+  .refleksi-head h2 { font-size: 28px; color: var(--ungu-tua); margin: 0; font-weight: 900; }
+  .refleksi-head p { font-size: 16px; margin: 4px 0 0; color: var(--tinta); opacity: 0.8; }
+  .refleksi-q { font-size: 18px; font-weight: 800; color: var(--ungu-tua); margin-bottom: 6px; }
+  .refleksi-input { width: 100%; height: 80px; padding: 12px; font-size: 16px; font-family: inherit; border: 2px solid var(--garis); border-radius: 14px; outline: none; transition: border 0.2s; resize: none; background: #FAF8FF; }
+  .refleksi-input:focus { border-color: var(--ungu); background: #FFF; }
+  .refleksi-skala { display: flex; gap: 14px; justify-content: center; margin: 6px 0; }
+  .refleksi-star-btn { background: #F8FAFC; border: 2px solid var(--garis); padding: 10px 20px; border-radius: 99px; font-size: 16px; font-weight: 800; cursor: pointer; color: var(--tinta); transition: all .2s; }
+  .refleksi-star-btn.sel { background: var(--ungu); color: #fff; border-color: var(--ungu-tua); }
+
+  /* ====== SOAL & INTERAKTIF ====== */
+  .akt-instruksi { font-size: 20px; margin: 0 0 16px; background: #fff; padding: 10px 20px; border-radius: 16px; display: inline-block; box-shadow: var(--bayang-kecil); text-align: center; border: 2px solid var(--garis); }
+  
+  .soal-split { display: flex; gap: 24px; flex: 1; min-height: 0; align-items: stretch; }
+  .soal-split .soal-kiri {
+    flex: 0 0 44%; max-width: 44%;
+    background: #FFFFFF; border-radius: 28px; padding: 22px 26px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05); border-left: 10px solid var(--primary);
+    overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+  }
+  .soal-split .soal-kiri .soal-label { font-size: 13px; font-weight: 900; color: var(--primary); letter-spacing: 2px; text-transform: uppercase; }
+  .soal-split .soal-kiri .soal-teks { font-size: 20px; font-weight: 800; line-height: 1.4; color: var(--primary-tua); }
+  .soal-split .soal-kiri .soal-stimulus { font-size: 16px; font-weight: 600; line-height: 1.5; color: var(--tinta); background: var(--krem-2); border-radius: 14px; padding: 12px 16px; border: 1px solid var(--garis); }
+  .soal-split .soal-kiri .soal-stimulus b { color: var(--primary-tua); }
+  .soal-split .opsi-kanan { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; justify-content: center; }
+  .soal-split .opsi-list { display: flex; flex-direction: column; gap: 10px; }
+  .opsi { background: #FFFFFF; border: 3px solid var(--garis); border-radius: 20px; padding: 14px 18px; font-size: 18px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); transition: all .2s; color: var(--tinta); }
+  .opsi:hover { border-color: var(--primary); background: var(--biru-muda); }
+  .opsi .bul { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%; background: var(--garis); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; color: var(--primary-tua); transition: all .2s; }
+  .opsi:hover .bul { background: var(--primary); color: #fff; }
+  .opsi.benar { border-color: var(--hijau-tua); background: #ECFDF5; color: var(--hijau-tua); }
+  .opsi.benar .bul { background: var(--hijau-tua); color: #fff; }
+  .opsi.salah { border-color: var(--salah); background: #FEF2F2; color: var(--salah); }
+  .opsi.salah .bul { background: var(--salah); color: #fff; }
+
+  .jodoh-wrap { position: relative; display: flex; gap: 30px; flex: 1; min-height: 0; justify-content: center; z-index: 1; }
+  .jodoh-kol { flex: 1; display: flex; flex-direction: column; gap: 12px; justify-content: center; z-index: 2; }
+  .pair-item { 
+    position: relative; z-index: 2;
+    border: 3px solid var(--garis); background: #fff; border-radius: 20px; 
+    padding: 12px 18px; font-size: 18px; font-weight: 700; cursor: pointer; 
+    display: flex; align-items: center; justify-content: flex-start; gap: 14px; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.02); min-height: 75px; text-align: left; color: var(--tinta); transition: all 0.2s;
+  }
+  .pair-item:hover { border-color: var(--primary); background: var(--biru-muda); }
+  .pair-item img.img-pair { width: 45px; height: 45px; object-fit: contain; flex-shrink: 0; }
+  .pair-item.sel { border-color: var(--accent); background: #FFF9E6; transform: scale(1.02); box-shadow: var(--bayang-kecil); color: var(--accent-tua); }
+  .pair-item.locked { border-color: var(--hijau-tua); background: #ECFDF5; cursor: default; color: var(--hijau-tua); }
+  .pair-item.salah { border-color: var(--salah); background: #FEF2F2; animation: shake 0.4s; color: var(--salah); }
+  
+  @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);} }
+  @keyframes drawLine { to { stroke-dashoffset: 0; } }
+  .jodoh-line { stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: drawLine 0.5s ease-in-out forwards; }
+  
+  .scene-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; }
+  .obj-card { 
+    background: #fff; border: 3px solid var(--garis); border-radius: 24px; 
+    padding: 16px; font-size: 20px; font-weight: 700; cursor: pointer; 
+    display: flex; flex-direction: column; align-items: center; justify-content: center; 
+    gap: 12px; text-align: center; box-shadow: var(--bayang-kecil); transition: all 0.2s; color: var(--tinta);
+  }
+  .obj-card:hover { border-color: var(--primary); background: var(--biru-muda); }
+  .obj-card img.img-obj { width: auto; height: 110px; object-fit: contain; filter: drop-shadow(0 5px 8px rgba(0,0,0,0.1)); }
+  .obj-card.benar { border-color: var(--hijau-tua); background: #ECFDF5; color: var(--hijau-tua); }
+  .obj-card.salah { border-color: var(--salah); background: #FEF2F2; color: var(--salah); }
+  
+  .urut-item { 
+    background: #fff; border: 2px solid var(--garis); border-radius: 20px; padding: 10px 16px; 
+    font-size: 18px; font-weight: 700; display: flex; align-items: center; 
+    gap: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); margin-bottom: 10px; 
+    min-height: 60px; color: var(--tinta);
+  }
+  .urut-item .num { background: var(--primary); color: #fff; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; flex-shrink: 0; }
+  .urut-item > span:nth-child(2) { flex: 1; line-height: 1.3; } 
+  .urut-item .btn-kuning { flex: 0 0 auto; width: 38px; height: 38px; padding: 0; display:flex; align-items:center; justify-content:center; font-size: 16px; } 
+  
+  .feedback { border-radius: 20px; padding: 14px 20px; font-size: 17px; font-weight: 700; line-height: 1.45; display: none; text-align: center; margin-top: 12px; }
+  .feedback.show { display: block; }
+  .feedback.ok { background: #D1FAE5; border: 3px solid var(--hijau-tua); color: var(--hijau-tua); }
+  .feedback.no { background: #FEE2E2; border: 3px solid var(--salah); color: var(--salah); }
+  
+  /* ====== GAME KUMPUL & SAMBUNG ====== */
+  .kumpul-hud { display: flex; justify-content: center; gap: 20px; align-items: center; margin-bottom: 12px; }
+  .kumpul-hud .hud-box { background: #fff; padding: 6px 20px; border-radius: 99px; font-weight: 900; font-size: 20px; box-shadow: var(--bayang-kecil); border: 3px solid var(--garis); }
+  .kumpul-hud .hud-time { color: var(--salah); border-color: var(--salah); }
+  .kumpul-hud .hud-coll { color: var(--hijau-tua); border-color: var(--hijau-tua); }
+  .kumpul-area { position: relative; width: 100%; flex: 1; min-height: 0; background: radial-gradient(circle at 50% 40%, #FFFDF5, #FDF2E9); border: 4px dashed var(--accent); border-radius: 24px; overflow: hidden; box-shadow: inset 0 4px 14px rgba(0,0,0,0.04); }
+  .kumpul-flag { position: absolute; width: 85px; cursor: pointer; animation: floatUp 0.25s ease; }
+  .kumpul-flag:active { transform: scale(0.85); }
+  @keyframes floatUp { from { transform: scale(0) rotate(-15deg); } to { transform: scale(1) rotate(0); } }
+  .kumpul-flag img { width: 100%; height: auto; pointer-events: none; filter: drop-shadow(0 5px 8px rgba(0,0,0,0.25)); border-radius: 4px; }
+  
+  .sambung-lirik { background: linear-gradient(135deg, var(--primary), var(--primary-tua)); color:#fff; padding: 20px 24px; border-radius: 24px; font-size: 22px; font-weight: 800; text-align:center; line-height:1.4; box-shadow: var(--bayang); }
+  .sambung-opsi { display:flex; flex-direction: column; gap: 12px; margin-top: 18px; }
+  .sambung-btn { background:#fff; border: 3px solid var(--garis); border-radius: 18px; padding: 14px 20px; font-size: 19px; font-weight: 700; cursor:pointer; color: var(--tinta); transition: all 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+  .sambung-btn:hover { border-color: var(--primary); background: var(--biru-muda); }
+  .sambung-btn.benar { border-color: var(--hijau-tua); background:#ECFDF5; color: var(--hijau-tua); }
+  .sambung-btn.salah { border-color: var(--salah); background:#FEF2F2; color: var(--salah); }
+  
+  /* ====== EFEK & MODAL ====== */
+  #efek-salah { position: absolute; inset: 0; z-index: 45; pointer-events: none; background: rgba(231, 76, 60, 0); transition: background 0.6s ease-out; }
+  #efek-salah.nyala { background: rgba(231, 76, 60, 0.4); transition: none; }
+  .confetti { position: absolute; width: 12px; height: 12px; z-index: 45; opacity: 1; pointer-events: none; animation: pop 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+  @keyframes pop { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0) rotate(720deg); opacity: 0; } }
+  .modal-bg { position: absolute; inset: 0; z-index: 50; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; }
+  .modal-bg.show { display: flex; }
+  .modal { width: 800px; max-width: 90%; max-height: 85%; overflow: auto; background: #FFFFFF; border-radius: 40px; padding: 35px; position: relative; box-shadow: 0 25px 50px rgba(0,0,0,0.4); border: 3px solid var(--primary); }
+  .modal h3 { margin: 0 0 16px; font-size: 30px; color: var(--primary-tua); font-weight: 900; }
+  .modal p, .modal li, .info-tabel td { font-size: 18px; line-height: 1.5; color: var(--tinta); }
+  .modal .tutup { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; border-radius: 50%; font-weight: bold; background: var(--krem-2); color: var(--salah); display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid var(--garis); font-size: 18px; }
+  .input-form { width: 100%; padding: 14px 18px; font-size: 20px; font-family: inherit; font-weight: 700; color: var(--tinta); border: 3px solid var(--garis); border-radius: 16px; margin-bottom: 14px; outline: none; transition: border 0.3s; background: #fff; }
+  .input-form:focus { border-color: var(--primary); background: var(--biru-muda); }
+  .info-tabel { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; }
+  .info-tabel td { border: 2px solid var(--garis); padding: 10px 14px; }
+  .info-tabel td:first-child { font-weight: 800; background: var(--krem-2); width: 40%; color: var(--primary-tua); }
+  .akhir { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; }
+  .akhir h2 { font-size: 42px; color: var(--primary-tua); margin: 0; font-weight: 900; }
+  .akhir .skor-angka { font-size: 64px; font-weight: 900; color: var(--accent-tua); margin: 4px 0; text-shadow: 0 4px 10px rgba(240, 147, 43, 0.3); }
+  .akhir .identitas { font-size: 20px; font-weight: 700; background: #FFF9E6; padding: 8px 20px; border-radius: 99px; color: #856404; border: 2px solid #F1C40F; box-shadow: var(--bayang-kecil); }
+  #audio-widget {
+    position: absolute; top: 650px; left: 540px; z-index: 60; background: #FFFFFF; padding: 6px 16px; border-radius: 99px;
+    display: none; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); border: 2px solid var(--garis);
+  }
+  .icon-btn-small { width: 32px; height: 32px; border: none; border-radius: 50%; background: var(--krem-2); color: var(--primary); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  #volume-slider { -webkit-appearance: none; width: 100px; height: 6px; background: #DFE6E9; border-radius: 5px; outline: none; cursor: pointer; }
+  #volume-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--primary); cursor: pointer; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+    
+    <div id="efek-salah"></div>
+
+    <!-- 1. SCREEN JUDUL -->
+    <section id="scr-judul" class="screen active">
+      <div class="bg"><img id="cfg-bgjudul" src="./asset/img/bg_judul.jpg" alt="" onerror="imgErr(this)"></div>
+      <div class="judul-topright">
+        <button class="icon-btn" data-sfx onclick="openModal('modal-info')" title="Informasi">i</button>
+        <button class="icon-btn" data-sfx onclick="openModal('modal-dev')" title="Pengembang">★</button>
+      </div>
+      <div class="judul-center">
+        <h1 class="judul-utama" id="cfg-judul">Judul Materi</h1>
+        <p class="judul-sub" id="cfg-subjudul">Sub Judul Materi</p>
+        <button class="btn btn-kuning mulai-btn" data-sfx onclick="openModal('modal-login')">▶ MULAI</button>
+      </div>
+      <div style="position: absolute; bottom: 20px; right: 30px; z-index: 6; color: rgba(255, 255, 255, 0.7); font-size: 14px; font-weight: 600; letter-spacing: 0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">
+        🤖 Dibuat dengan AI
+      </div>
+    </section>
+
+    <!-- 2. SCREEN MENU -->
+    <section id="scr-menu" class="screen">
+      <div class="bg"></div>
+      <div class="topbar">
+        <div class="judul-bar"><span id="cfg-judul-menu">Judul Materi</span><small>Pilih kegiatan belajarmu</small></div>
+        <div class="spacer"></div>
+        <button class="icon-btn" data-sfx onclick="goJudul()" title="Beranda">⌂</button>
+      </div>
+      <div class="menu-head">
+        <h2>Mau melakukan apa hari ini?</h2>
+        <p>Jelajahi <b>Belajar</b>, ikuti <b>Bermain</b>, analisis di <b>Detektif Sejarah</b>, uji di <b>Berlatih</b>, & isi <b>Refleksi</b>.</p>
+      </div>
+      <div class="menu-cards">
+        <button class="menu-card mc-belajar" data-sfx onclick="startBelajar()">
+          <img src="./asset/img/menu_belajar.png" class="img-ikon" alt="Belajar" style="border-radius:50%; background:#fff; padding:8px;" onerror="imgErr(this)">
+          <div class="mc-judul">Belajar</div>
+          <div class="mc-sub">Materi Pembelajaran</div>
+        </button>
+        <button class="menu-card mc-bermain" data-sfx onclick="startBermain()">
+          <img src="./asset/img/menu_bermain.png" class="img-ikon" alt="Bermain" style="border-radius:50%; background:#fff; padding:8px;" onerror="imgErr(this)">
+          <div class="mc-judul">Bermain</div>
+          <div class="mc-sub">10 Game Interaktif</div>
+        </button>
+        <button class="menu-card mc-museum" data-sfx onclick="startMuseum()">
+          <img src="./asset/img/menu_detektif.png" class="img-ikon" alt="Detektif Sejarah" style="border-radius:50%; background:#fff; padding:8px;" onerror="imgErr(this)">
+          <div class="mc-judul">Detektif Sejarah</div>
+          <div class="mc-sub">Kurator & Studi Kasus</div>
+        </button>
+        <button class="menu-card mc-berlatih" data-sfx onclick="startBerlatih()">
+          <img src="./asset/img/menu_berlatih.png" class="img-ikon" alt="Berlatih" style="border-radius:50%; background:#fff; padding:8px;" onerror="imgErr(this)">
+          <div class="mc-judul">Berlatih</div>
+          <div class="mc-sub">10 Soal Evaluasi</div>
+        </button>
+        <button class="menu-card mc-refleksi" data-sfx onclick="startRefleksi()">
+          <img src="./asset/img/menu_refleksi.png" class="img-ikon" alt="Refleksi" style="border-radius:50%; background:#fff; padding:8px;" onerror="imgErr(this)">
+          <div class="mc-judul">Refleksi</div>
+          <div class="mc-sub">Jurnal Diri</div>
+        </button>
+      </div>
+    </section>
+
+    <!-- 3. SCREEN BELAJAR -->
+    <section id="scr-belajar" class="screen">
+      <div class="bg"></div>
+      <div class="topbar">
+        <div class="judul-bar">Belajar<small id="belajar-sub">Materi</small></div>
+        <div class="spacer"></div>
+        <div class="progress-wrap"><span class="progress-label" id="belajar-plabel">1/4</span><div class="progress-track"><div class="progress-fill" id="belajar-pfill"></div></div></div>
+        <button class="icon-btn" data-sfx onclick="goMenu()" title="Menu">☰</button>
+      </div>
+      <div class="content" id="belajar-content"></div>
+      <div class="navbar">
+        <button class="nav-btn nav-back" id="belajar-prev" data-sfx onclick="belajarPrev()">◀ Sebelumnya</button>
+        <button class="nav-btn nav-next" id="belajar-next" data-sfx onclick="belajarNext()">Selanjutnya ▶</button>
+      </div>
+    </section>
+
+    <!-- 4. SCREEN DETEKTIF SEJARAH (C3 MENGAPLIKASIKAN) -->
+    <section id="scr-museum" class="screen">
+      <div class="bg"></div>
+      <div class="topbar">
+        <div class="judul-bar">Detektif Sejarah<small>Studi Kasus & Aplikasi Pengetahuan (C3)</small></div>
+        <div class="spacer"></div>
+        <div class="skor-badge">🔍 Artefak: <span id="museum-teridentifikasi">0</span>/3</div>
+        <button class="icon-btn" data-sfx onclick="goMenu()" title="Menu" style="margin-left:12px;">☰</button>
+      </div>
+      <div class="content" id="museum-content"></div>
+      <div class="navbar">
+        <button class="nav-btn nav-back" data-sfx onclick="goMenu()">☰ Menu</button>
+        <button class="nav-btn nav-next" id="museum-next" data-sfx onclick="museumNextStep()" disabled>Artefak Berikutnya ▶</button>
+      </div>
+    </section>
+
+    <!-- 5. SCREEN BERMAIN -->
+    <section id="scr-bermain" class="screen">
+      <div class="bg"></div>
+      <div class="topbar">
+        <div class="judul-bar">Bermain<small id="bermain-sub">Aktivitas Interaktif</small></div>
+        <div class="spacer"></div>
+        <div class="skor-badge">🏆 Skor: <span id="skor-bermain-angka">0</span></div>
+        <div class="progress-wrap" style="margin-left:10px"><span class="progress-label" id="bermain-plabel">1/10</span><div class="progress-track" style="width:120px"><div class="progress-fill" id="bermain-pfill"></div></div></div>
+        <button class="icon-btn" data-sfx onclick="goMenu()" title="Menu">☰</button>
+      </div>
+      <div class="content" id="bermain-content"></div>
+      <div class="navbar">
+        <button class="nav-btn nav-back" data-sfx onclick="bermainPrev()">◀ Sebelumnya</button>
+        <button class="nav-btn nav-next" id="bermain-next" data-sfx onclick="bermainNext()" disabled>Selanjutnya ▶</button>
+      </div>
+    </section>
+
+    <!-- 6. SCREEN BERLATIH -->
+    <section id="scr-berlatih" class="screen">
+      <div class="bg"></div>
+      <div class="topbar">
+        <div class="judul-bar">Berlatih<small id="berlatih-sub">Uji Pemahaman</small></div>
+        <div class="spacer"></div>
+        <div class="progress-wrap"><span class="progress-label" id="berlatih-plabel">1/10</span><div class="progress-track" style="width:160px"><div class="progress-fill" id="berlatih-pfill"></div></div></div>
+        <button class="icon-btn" data-sfx onclick="goMenu()" title="Menu">☰</button>
+      </div>
+      <div class="content" id="berlatih-content"></div>
+      <div class="navbar">
+        <button class="nav-btn nav-back" data-sfx onclick="berlatihPrev()">◀ Sebelumnya</button>
+        <button class="nav-btn nav-next" id="berlatih-next" data-sfx onclick="berlatihNext()" disabled>Selanjutnya ▶</button>
+      </div>
+    </section>
+
+    <!-- 7. SCREEN REFLEKSI -->
+    <section id="scr-refleksi" class="screen">
+      <div class="bg"></div>
+      <div class="topbar">
+        <div class="judul-bar">Refleksi Belajar<small>Jurnal & Evaluasi Diri</small></div>
+        <div class="spacer"></div>
+        <button class="icon-btn" data-sfx onclick="goMenu()" title="Menu">☰</button>
+      </div>
+      <div class="content" id="refleksi-content"></div>
+      <div class="navbar">
+        <button class="nav-btn nav-back" data-sfx onclick="goMenu()">☰ Menu</button>
+        <button class="nav-btn nav-next" data-sfx onclick="simpanRefleksi()">Simpan Jurnal ✔</button>
+      </div>
+    </section>
+
+    <!-- MODAL-MODAL -->
+    <div class="modal-bg" id="modal-login">
+      <div class="modal" style="width: 550px; text-align: center; padding: 50px;">
+        <button class="tutup" data-sfx onclick="closeModal('modal-login')">✕</button>
+        <h3>Selamat Datang!</h3>
+        <p style="margin-bottom:24px;">Silakan isi identitasmu sebelum mulai belajar.</p>
+        <input type="text" id="in-nama" class="input-form" placeholder="Nama Lengkap" required>
+        <input type="text" id="in-sekolah" class="input-form" placeholder="Asal Sekolah">
+        <div id="login-pesan" style="color:var(--salah); font-weight:bold; margin-bottom:16px; display:none;">⚠️ Nama belum diisi!</div>
+        <button class="btn btn-kuning" style="width:100%; height:64px; font-size:24px; margin-top:10px;" data-sfx onclick="simpanIdentitas()">Mulai Belajar</button>
+      </div>
+    </div>
+
+    <div class="modal-bg" id="modal-info">
+      <div class="modal">
+        <button class="tutup" data-sfx onclick="closeModal('modal-info')">✕</button>
+        <h3>Informasi Materi</h3>
+        <table class="info-tabel">
+          <tr><td>Fase / Kelas</td><td id="cfg-fase">Fase ... • Kelas ...</td></tr>
+          <tr><td>Mata Pelajaran</td><td id="cfg-mapel">Mata Pelajaran</td></tr>
+          <tr><td>Unit</td><td id="cfg-unit">Unit</td></tr>
+          <tr><td>Sub Unit</td><td id="cfg-subunit">Sub Unit</td></tr>
+          <tr><td>Tujuan Pembelajaran</td><td id="cfg-tp">Tujuan Pembelajaran (TP)</td></tr>
+        </table>
+      </div>
+    </div>
+    
+    <div class="modal-bg" id="modal-dev">
+      <div class="modal" style="width: 750px; padding: 40px;">
+        <button class="tutup" data-sfx onclick="closeModal('modal-dev')">✕</button>
+        <h3 style="text-align: center; margin-bottom: 24px;">Profil Pengembang</h3>
+        <div style="display: flex; gap: 30px; align-items: center; background: #F8FAFC; padding: 30px; border-radius: 32px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.02); border: 2px solid var(--garis);">
+          <div style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 14px;">
+            <div style="position: relative;">
+              <img id="cfg-foto" src="./asset/img/profil.png" alt="Foto Pengembang" style="width: 160px; height: 200px; border-radius: 16px; object-fit: cover; box-shadow: var(--bayang); background: var(--primary); border: 4px solid #fff;" onerror="imgErr(this)">
+              <div style="position: absolute; bottom: -8px; right: -8px; background: var(--hijau-tua); color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 3px solid #fff; box-shadow: var(--bayang-kecil);" title="Terverifikasi">✓</div>
+            </div>
+            <div id="cfg-nama2" style="background: var(--accent); color: #fff; font-weight: 900; padding: 6px 18px; border-radius: 99px; font-size: 15px; box-shadow: var(--bayang-kecil);">Nama Pengembang</div>
+          </div>
+          <div style="flex: 1;">
+            <table class="info-tabel" style="margin-top: 0; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+              <tr><td style="width: 35%;">Nama</td><td id="cfg-nama" style="font-weight: 800; color: var(--primary-tua); font-size: 22px;">Nama Pengembang</td></tr>
+              <tr><td>Instansi</td><td id="cfg-instansi">Nama Instansi / Sekolah</td></tr>
+              <tr><td>Jenis</td><td id="cfg-jenis">Media Pembelajaran Interaktif (MPI)</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="audio-widget">
+      <button class="icon-btn-small" id="sound-toggle" data-sfx="no" onclick="toggleSound()" title="Suara">🔊</button>
+      <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1" oninput="changeVolume(this.value)">
+    </div>
+  </div>
+</div>
+
+<script>
+/* ##############################################################
+   #  BAGIAN A — KONFIGURASI (EDIT DI SINI SAJA)               #
+   ############################################################## */
+
+const CONFIG = {
+  judul: "Kerajaan Islam di Indonesia",
+  subJudul: "Analisis Peristiwa Penting Lingkup Lokal, Nasional, dan Global",
+  fase: "Fase E • Kelas X",
+  mapel: "Sejarah",
+  unit: "Kerajaan Islam",
+  subUnit: "Perkembangan & Jaringan Kehidupan",
+  tp: "Menganalisis berbagai peristiwa atau kejadian penting dalam lingkup lokal, nasional, dan global mulai dari masa kerajaan Hindu-Budha hingga masa kerajaan Islam.",
+  logo: "./asset/img/logo.png",
+  bgJudul: "./asset/img/bg_judul.jpg",
+  profil: {
+    nama: "Yusnani, S.Pd",
+    instansi: "SMAN 2 Kuta Baro",
+    jenis: "Media Pembelajaran Interaktif (MPI)",
+    foto: "./asset/img/profil.png"
+  }
+};
+
+/* --- MATERI BELAJAR --- */
+const MATERI = [
+  {
+    judul: "Samudera Pasai: Gerbang Islam Nusantara",
+    img: "./asset/img/belajar_1.png",
+    intro: "Kerajaan Samudera Pasai merupakan kerajaan Islam pertama di Nusantara yang memegang peran global yang krusial.",
+    isi: `Didirikan oleh <b>Marah Silu (Sultan Malik as-Saleh)</b> pada abad ke-13 di Aceh. Posisi geografisnya sangat strategis di Selat Malaka, menjadikannya bandar transito internasional utama.<br><br>
+    <b>Peristiwa Penting:</b>
+    <ul>
+      <li><b>Lokal:</b> Penggabungan komunitas Muslim Samudera dan Pasai untuk memperkuat pemerintahan.</li>
+      <li><b>Nasional:</b> Pusat penyebaran Islam awal yang menginspirasi lahirnya kerajaan Islam di Jawa dan Maluku.</li>
+      <li><b>Global:</b> Dikunjungi penjelajah dunia seperti <b>Ibnu Batutah</b> serta terhubung dengan pedagang Arab, India, dan Tiongkok.</li>
+    </ul>
+    
+    <div class="belajar-box-sub">
+      <h4>🏆 Peninggalan Sejarah</h4>
+      <ul>
+        <li><b>Mata Uang Dirham Emas:</b> Bukti kemakmuran dan kedaulatan ekonomi kerajaan.</li>
+        <li><b>Nisan Sultan Malik as-Saleh:</b> Berhias kaligrafi Arab & pualam Cambay (Gujarat).</li>
+        <li><b>Lonceng Cakra Donya:</b> Hadiah persahabatan dari Kekaisaran Tiongkok (Laksamana Cheng Ho).</li>
+      </ul>
+    </div>
+
+    <div class="belajar-box-sub">
+      <h4>⚡ Faktor Keruntuhan</h4>
+      <ul>
+        <li><b>Serangan Majapahit:</b> Invasi Kerajaan Majapahit pada tahun 1345 dan 1350 yang melemahkan kekuatan pertahanan Pasai.</li>
+        <li><b>Konflik Internal:</b> Perebutan takhta dan perang saudara di lingkungan istana kesultanan.</li>
+        <li><b>Kemunculan Malaka:</b> Gesernya jaringan dagang utama ke Kesultanan Malaka, hingga akhirnya Pasai ditaklukkan oleh Kesultanan Aceh Darussalam pada tahun 1521.</li>
+      </ul>
+    </div>`,
+    kuis: {
+      tanya: "Siapakah musafir terkenal asal Maroko yang mencatat kemakmuran Kerajaan Samudera Pasai dalam jaringan global?",
+      o: ["Ibnu Batutah", "Marco Polo"],
+      j: 0
+    }
+  },
+  {
+    judul: "Kesultanan Demak: Pelopor Islamisasi Jawa",
+    img: "./asset/img/belajar_2.png",
+    intro: "Kesultanan Demak menandai bergesernya pusat peradaban dari dominasi Hindu-Buddha Majapahit menuju era Islam di Jawa.",
+    isi: `Didirikan oleh <b>Raden Patah</b> pada akhir abad ke-15 dengan dukungan dari <b>Walisongo</b>. Demak berkembang pesat sebagai kekuatan maritim dan agraris.<br><br>
+    <b>Peristiwa Penting:</b>
+    <ul>
+      <li><b>Lokal:</b> Pembangunan Masjid Agung Demak sebagai pusat syiar agama, kebudayaan, dan tata negara.</li>
+      <li><b>Nasional:</b> Menaklukkan bandar-bandar pesisir utara Jawa dan mengakhiri legitimasi politik Majapahit.</li>
+      <li><b>Global:</b> Pengiriman armada militer di bawah pimpinan <b>Pati Unus (Pangeran Sabrang Lor)</b> menyerang Portugis di Malaka.</li>
+    </ul>
+
+    <div class="belajar-box-sub">
+      <h4>🏆 Peninggalan Sejarah</h4>
+      <ul>
+        <li><b>Masjid Agung Demak:</b> Arsitektur atap tumpang tiga khas akulturasi dengan <i>Soko Tatal</i> buatan Sunan Kalijaga.</li>
+        <li><b>Pintu Bledeg:</b> Pintu ukir kayu karya Ki Ageng Selo berukir motif naga.</li>
+        <li><b>Dampar Kencana:</b> Takhta kerajaan Kesultanan Demak yang masih terlindungi dengan baik.</li>
+      </ul>
+    </div>
+
+    <div class="belajar-box-sub">
+      <h4>⚡ Faktor Keruntuhan</h4>
+      <ul>
+        <li><b>Perang Saudara Pasca Sultan Trenggono:</b> Konflik berdarah antara Sunan Prawoto dengan Arya Penangsang memperebutkan takhta kesultanan.</li>
+        <li><b>Krisis Legitimasi Politik:</b> Ketidakstabilan politik dalam istana memperlemah pengaruh Demak di pesisir Jawa.</li>
+        <li><b>Pemindahan Pusat Kerajaan:</b> Kemenangan Joko Tingkir (Sultan Hadiwijaya) yang memindahkan pusat pemerintahan ke pedalaman Pajang pada tahun 1568.</li>
+      </ul>
+    </div>`,
+    kuis: {
+      tanya: "Siapakah pemimpin Kesultanan Demak yang menyerang Portugis di Malaka dan dijuluki 'Pangeran Sabrang Lor'?",
+      o: ["Sultan Trenggono", "Pati Unus"],
+      j: 1
+    }
+  },
+  {
+    judul: "Kesultanan Aceh Darussalam: Benteng Politik Maritim",
+    img: "./asset/img/belajar_3.png",
+    intro: "Aceh Darussalam bangkit sebagai imperium maritim besar yang memadukan kekuatan militer, perdagangan, dan tradisi intelektual.",
+    isi: `Mencapai puncak kejayaan pada masa <b>Sultan Iskandar Muda</b> (1607-1636). Aceh menerapkan militerisasi maritim yang tangguh dan diplomasi antarbenua.<br><br>
+    <b>Peristiwa Penting:</b>
+    <ul>
+      <li><b>Lokal:</b> Penyusunan undang-undang pemerintahan berlandaskan syariat Islam yang dikenal dengan <i>Adat Meukuta Alam</i>.</li>
+      <li><b>Nasional:</b> Menguasai monopoli perdagangan lada di pantai barat-timur Sumatra dan Semenanjung Malaya.</li>
+      <li><b>Global:</b> Menjalin kerja sama diplomatik dan persenjataan dengan <b>Kekaisaran Turki Utsmani</b>, Inggris, dan Prancis.</li>
+    </ul>
+
+    <div class="belajar-box-sub">
+      <h4>🏆 Peninggalan Sejarah</h4>
+      <ul>
+        <li><b>Masjid Raya Baiturrahman:</b> Simbol ketahanan dan pusat peradaban keagamaan Aceh.</li>
+        <li><b>Kitab Adat Meukuta Alam:</b> Undang-undang tata negara maritim dan hukum kesultanan.</li>
+        <li><b>Gunongan & Taman Ghairah:</b> Bangunan arsitektur istana hadiah Sultan Iskandar Muda untuk Putri Pahang.</li>
+        <li><b>Meriam Lada Sicupak:</b> Meriam kuno bukti bantuan persenjataan dari Turki Utsmani.</li>
+      </ul>
+    </div>
+
+    <div class="belajar-box-sub">
+      <h4>⚡ Faktor Keruntuhan</h4>
+      <ul>
+        <li><b>Kemunduran Sepeninggal Sultan Iskandar Muda:</b> Pengganti sultan tidak memiliki kepemimpinan sekuat pendahulunya.</li>
+        <li><b>Meningkatnya Kekuatan Uleebalang & Bangsawan:</b> Perebutan pengaruh internal antara kaum ulama dan bangsawan lokal.</li>
+        <li><b>Agresi Kolonial Belanda:</b> Perang Aceh (1873–1904) yang menguras kekuatan politik dan ekonomi kesultanan hingga akhirnya dikuasai Belanda.</li>
+      </ul>
+    </div>`,
+    kuis: {
+      tanya: "Pada masa kepemimpinan sultan siapakah Kesultanan Aceh Darussalam mencapai puncak kejayaan maritimnya?",
+      o: ["Sultan Ali Mughayat Syah", "Sultan Iskandar Muda"],
+      j: 1
+    }
+  },
+  {
+    judul: "Gowa-Tallo: Hub Dagang Indonesia Timur",
+    img: "./asset/img/belajar_4.png",
+    intro: "Kerajaan kembar Gowa-Tallo (Makassar) menjadi pilar utama Islam di Indonesia Timur dengan memegang teguh prinsip laut bebas.",
+    isi: `Resmi memeluk Islam pada awal abad ke-17 di bawah pemerintahan Sultan Alauddin. Menjadi pelabuhan transito yang makmur dan adil bagi seluruh pedagang internasional.<br><br>
+    <b>Peristiwa Penting:</b>
+    <ul>
+      <li><b>Lokal:</b> Penyatuan Kerajaan Gowa dan Tallo menjadi satu pemerintahan kembar yang solid.</li>
+      <li><b>Nasional:</b> Hub utama pengumpul dan pendistribusi rempah-rempah Maluku ke wilayah barat Nusantara.</li>
+      <li><b>Global:</b> Perjuangan gigih <b>Sultan Hasanuddin</b> (Ayam Jantan dari Timur) melawan monopoli perdagangan VOC Belanda.</li>
+    </ul>
+
+    <div class="belajar-box-sub">
+      <h4>🏆 Peninggalan Sejarah</h4>
+      <ul>
+        <li><b>Benteng Somba Opu:</b> Benteng pertahanan utama dan pusat perdagangan Makassar.</li>
+        <li><b>Benteng Rotterdam (Fort Rotterdam):</b> Benteng Ujung Pandang yang direbut dan diubah namanya oleh VOC.</li>
+        <li><b>Masjid Katangka (Masjid Al-Hilal):</b> Salah satu masjid tertua di Sulawesi Selatan.</li>
+        <li><b>Istana Balla Lompoa:</b> Rekonstruksi istana kediaman Raja Gowa.</li>
+      </ul>
+    </div>
+
+    <div class="belajar-box-sub">
+      <h4>⚡ Faktor Keruntuhan</h4>
+      <ul>
+        <li><b>Perang Makassar (1666–1669):</b> Invasi gabungan pasukan VOC Belanda dan Arung Palakka dari Kerajaan Bone.</li>
+        <li><b>Penandatanganan Perjanjian Bongaya (1667):</b> Perjanjian sepihak yang membatasi hak pelayaran maritim Gowa-Tallo dan memaksakan monopoli VOC.</li>
+        <li><b>Runtuhnya Kedaulatan Dagang:</b> Pelabuhan Makassar kehilangan statusnya sebagai pelabuhan bebas internasional.</li>
+      </ul>
+    </div>`,
+    kuis: {
+      tanya: "Siapakah raja Gowa-Tallo yang mendapat julukan 'Ayam Jantan dari Timur' karena kegigihannya melawan VOC?",
+      o: ["Sultan Hasanuddin", "Sultan Alauddin"],
+      j: 0
+    }
+  }
+];
+
+/* --- DETEKTIF SEJARAH DATA (C3 - MENGAPLIKASIKAN / DETEKTIF BUDAYA) --- */
+const dataMuseum = [
+  {
+    id: 1,
+    namaArtefak: "Masjid Kuno & Menara Kudus",
+    kategori: "Akulturasi Arsitektur & Keagamaan",
+    img: "./asset/img/art_masjid1.png",
+    skenario: "<b>Laporan Penemuan Situs:</b> Dalam ekskavasi kawasan pesisir Jawa, ditemukan kompleks bangunan kuno abad ke-16. Bangunan ini memiliki menara yang bentuknya sangat mirip dengan candi Hindu Jawa Timur, namun atapnya berbentuk tumpang tiga dan berfungsi sebagai tempat mengumandangkan azan serta sholat berjamaah.",
+    tanya1: "<b>Langkah 1 (Analisis Bentuk & Fungsi):</b> Mengapa struktur masjid ini menggabungkan arsitektur Candi Hindu dengan fungsi tempat ibadah Umat Islam?",
+    opsi1: [
+      { text: "Bentuk penyerahan kekuasaan penuh dari Hindu ke Kerajaan Islam", benar: false },
+      { text: "Strategi dakwah kultural (akulturasi) agar masyarakat lokal Hindu tidak merasa asing dengan kehadiran Islam", benar: true },
+      { text: "Ketidakmampuan arsitek Muslim saat itu untuk membuat menara gaya Arab", benar: false },
+      { text: "Perintah dari kolonial asing untuk menyatukan dua budaya", benar: false }
+    ],
+    tanya2: "<b>Langkah 2 (Aplikasi Dampak Sosial):</b> Sebagai Kurator Detektif Sejarah, penjelasan dampak makna sejarah apakah yang paling tepat untuk dilabelkan pada galeri artefak ini?",
+    opsi2: [
+      { text: "Bukti toleransi tinggi dan akulturasi budaya damai tanpa menghapus tradisi lokal yang sudah ada sebelumnya.", benar: true },
+      { text: "Simbol pertentangan keras antara Umat Hindu dan Umat Islam pada abad ke-16.", benar: false },
+      { text: "Bukti hilangnya pengaruh ajaran Islam akibat tergerus tradisi candi purba.", benar: false }
+    ],
+    fbBenar: "<b>Penilaian Kurator: Sempurna! (C3 Mengaplikasikan)</b><br>Arsitektur Menara Kudus adalah contoh nyata penerapannya dalam kehidupan masyarakat. Para ulama (Walisongo) mengaplikasikan pendekatan persuasif-kultural sehingga ajaran Islam dapat diterima secara damai tanpa konflik kebudayaan.",
+    fbSalah: "<b>Petunjuk Analisis Kurator:</b><br>Cermati bentuk menara dan atap tumpang! Mengapa para penyebar Islam tidak merobohkan seni gaya candi setempat melainkan mengadopsinya? Coba analisis konsep akulturasi damai!"
+  },
+  {
+    id: 2,
+    namaArtefak: "Nisan Sultan Malik as-Saleh",
+    kategori: "Inskripsi Kaligrafi & Jaringan Global",
+    img: "./asset/img/bm_pasai1.png",
+    skenario: "<b>Laporan Penemuan Artefak:</b> Ditemukan batu nisan kuno berukir kaligrafi Arab dengan bait-bait puisi Persia di Samudera Pasai. Bahan batu pualam/marmer pada nisan ini diimpor langsung dari Cambay, Gujarat, India.",
+    tanya1: "<b>Langkah 1 (Analisis Bukti):</b> Keberadaan nisan pualam khas Gujarat di Kerajaan Samudera Pasai membuktikan kondisi masyarakat saat itu, yaitu...",
+    opsi1: [
+      { text: "Samudera Pasai mengisolasi diri dari hubungan pedagang luar negeri", benar: false },
+      { text: "Telah terjalin hubungan jaringan perdagangan internasional dan diplomasi global yang erat antar-kerajaan maritim", benar: true },
+      { text: "Masyarakat Pasai tidak memiliki pengrajin batu nisan lokal", benar: false },
+      { text: "Pasai sepenuhnya dikuasai oleh kerajaan dari wilayah India", benar: false }
+    ],
+    tanya2: "<b>Langkah 2 (Aplikasi Fungsi Artefak):</b> Jika artefak ini dipajang di ZONA JARINGAN GLOBAL, keterangan fungsi nisan yang tepat adalah...",
+    opsi2: [
+      { text: "Sebagai penanda makam pimpinan politik sekaligus bukti kuatnya jaringan maritim jalur sutra laut.", benar: true },
+      { text: "Sebagai alat tukar pembayaran utama saat bertransaksi dengan pedagang asing.", benar: false },
+      { text: "Sebagai benteng pertahanan militer pantai dari ancaman serangan Portugis.", benar: false }
+    ],
+    fbBenar: "<b>Penilaian Kurator: Tepat Sekali! (C3 Mengaplikasikan)</b><br>Analisis kamu sangat tepat. Nisan pualam Cambay mengaplikasikan pengetahuan kita bahwa Samudera Pasai adalah hub (pusat transit) maritim global yang terhubung aktif dengan India, Persia, dan Timur Tengah.",
+    fbSalah: "<b>Petunjuk Analisis Kurator:</b><br>Perhatikan asal bahan pualam (Cambay, India) dan seni inskripsi Arab-Persia. Apakah ini menunjukkan keterisolasian atau justru keterhubungan dengan jaringan dunia internasional?"
+  },
+  {
+    id: 3,
+    namaArtefak: "Mahkota & Kitab Adat Meukuta Alam",
+    kategori: "Keraton & Sistem Pemerintahan",
+    img: "./asset/img/bm_aceh1.png",
+    skenario: "<b>Laporan Penemuan Manuskrip & Simbol Keraton:</b> Di dalam peti besi kuno, Detektif Budaya menemukan mahkota emas kesultanan serta kitab 'Adat Meukuta Alam' yang berisi hukum tata negara dan aturan perdagangan maritim Kerajaan Aceh.",
+    tanya1: "<b>Langkah 1 (Analisis Sistem Pemerintahan):</b> Mengapa Kesultanan Aceh merasa perlu menyusun undang-undang tata negara Adat Meukuta Alam yang ketat?",
+    opsi1: [
+      { text: "Untuk melarang seluruh kapal asing berlabuh di pelabuhan Aceh", benar: false },
+      { text: "Untuk mengatur birokrasi pemerintahan lokal, perdagangan internasional, serta memperkuat kedaulatan dari ancaman Portugis", benar: true },
+      { text: "Hanya sekadar formalitas tanpa pernah diterapkan dalam masyarakat", benar: false },
+      { text: "Untuk menggantikan seluruh syariat Islam dengan hukum barat", benar: false }
+    ],
+    tanya2: "<b>Langkah 2 (Pencocokan Galeri Museum):</b> Sebagai Kurator, di ruang galeri pameran manakah artefak kerajaan ini wajib ditempatkan?",
+    opsi2: [
+      { text: "Zona 'Sistem Pemerintahan, Kedaulatan Politik & Hukum Kesultanan Maritim'", benar: true },
+      { text: "Zona 'Persebaran Artefak Prasejarah & Kuno'", benar: false },
+      { text: "Zona 'Kesenian Musik & Tari Tradisional'", benar: false }
+    ],
+    fbBenar: "<b>Penilaian Kurator: Sangat Akurat! (C3 Mengaplikasikan)</b><br>Kamu berhasil bertindak sebagai kurator profesional! Kitab Adat Meukuta Alam dan Mahkota Keraton mencerminkan aplikasi sistem birokrasi modern, kedaulatan hukum, serta pertahanan maritim Aceh yang tangguh.",
+    fbSalah: "<b>Petunjuk Analisis Kurator:</b><br>Pikirkan peranan mahkota dan kitab aturan hukum tata negara! Apakah berkaitan dengan sistem pemerintahan & kedaulatan politik, atau sekadar kesenian biasa?"
+  }
+];
+
+/* --- GAME BERMAIN --- */
+const dataBermain = [
+  {
+    t: "jodoh",
+    sub: "Asal-usul Kerajaan",
+    ins: "Jodohkan nama pendiri kerajaan berikut dengan nama kerajaannya yang tepat!",
+    pairs: [
+      { n: 1, t: "Marah Silu / Sultan Malik as-Saleh" },
+      { n: 2, t: "Raden Patah" },
+      { n: 3, t: "Sultan Ali Mughayat Syah" }],
+    imgs: [
+      { n: 2, i: "./asset/img/bm_demak.png", name: "Kesultanan Demak" },
+      { n: 3, i: "./asset/img/bm_aceh.png", name: "Kesultanan Aceh" },
+      { n: 1, i: "./asset/img/bm_pasai.png", name: "Samudera Pasai" }
+    ]
+  },
+  {
+    t: "klik",
+    sub: "Pahlawan Maritim Nusantara",
+    ins: "Pilih gambar tokoh yang memimpin armada Demak menyerang Portugis di Malaka!",
+    opsi: [
+      { imgPath: "./asset/img/tokoh_patiunus.png", t: "Pati Unus", b: true, msg: "Benar! Pati Unus memimpin armada Demak menyerang Portugis sehingga dijuluki Pangeran Sabrang Lor." },
+      { imgPath: "./asset/img/tokoh_gajahmada.png", t: "Gajah Mada", b: false, msg: "Salah! Gajah Mada adalah patih dari kerajaan Hindu-Buddha Majapahit." },
+      { imgPath: "./asset/img/tokoh_hayamwuruk.png", t: "Hayam Wuruk", b: false, msg: "Salah! Hayam Wuruk adalah raja Majapahit." },
+      { imgPath: "./asset/img/tokoh_mulawarman.png", t: "Mulawarman", b: false, msg: "Salah! Mulawarman adalah raja Kutai." }
+    ]
+  },
+  {
+    t: "urut",
+    sub: "Garis Waktu Transisi Pemerintahan",
+    ins: "Urutkan perkembangan dominasi pemerintahan di Nusantara mulai dari masa Hindu-Buddha hingga Islam!",
+    urut: [
+      "Berdirinya Kerajaan Kutai sebagai kerajaan Hindu tertua",
+      "Masa kejayaan Majapahit menguasai wilayah Nusantara",
+      "Berdirinya Samudera Pasai sebagai kerajaan Islam pertama",
+      "Kejayaan Kesultanan Demak di pesisir utara Jawa"
+    ]
+  },
+  {
+    t: "kumpul",
+    sub: "Kolektor Artefak Islam",
+    ins: "Ketuk peninggalan/bukti sejarah dari masa Kerajaan Islam! Hindari peninggalan masa Hindu-Buddha.",
+    benar: "./asset/img/art_masjid.png", 
+    salah: [
+      "./asset/img/art_candi.png", 
+      "./asset/img/art_arca.png"
+    ]
+  },
+  {
+    t: "sambung",
+    sub: "Jaringan Diplomasi Global",
+    ins: "Sambungkan informasi diplomasi global Kesultanan Aceh Darussalam!",
+    hasil: "Aceh berhasil menjadi pilar perdagangan internasional berkat bantuan militer dan pengakuan dari Turki Utsmani.",
+    steps: [
+      {
+        prev: "Untuk menghadapi Portugis, Kesultanan Aceh mengirim utusan ke ...",
+        benar: "Kekaisaran Turki Utsmani",
+        salah: ["Kerajaan Sriwijaya", "Dinasti Tang"]
+      },
+      {
+        prev: "Sebagai balasan, Turki Utsmani mengirimkan bantuan berupa ...",
+        benar: "Meriam, persenjataan, dan ahli militer",
+        salah: ["Rempah-rempah lada", "Candi dan prasasti"]
+      },
+      {
+        prev: "Hubungan diplomasi global ini membuat posisi Aceh semakin ...",
+        benar: "Kuat dan disegani di Selat Malaka",
+        salah: ["Terisolasi dari pedagang asing", "Runtuh oleh serangan Majapahit"]
+      }
+    ]
+  },
+  {
+    t: "jodoh",
+    sub: "Gelar Pemimpin Islam",
+    ins: "Pasangkan nama tokoh pemimpin berikut dengan julukan sejarahnya yang tepat!",
+    pairs: [
+      { n: 1, t: "Sultan Hasanuddin" },
+      { n: 2, t: "Pati Unus" },
+      { n: 3, t: "Marah Silu" }
+    ],
+    imgs: [
+      { n: 1, i: "./asset/img/jl_ayam.png", name: "Ayam Jantan dari Timur" },
+      { n: 2, i: "./asset/img/jl_sabrang.png", name: "Pangeran Sabrang Lor" },
+      { n: 3, i: "./asset/img/jl_saleh.png", name: "Sultan Malik as-Saleh" }
+    ]
+  },
+  {
+    t: "klik",
+    sub: "Lokasi Strategis Maritim",
+    ins: "Pilih perairan internasional yang menjadi jalur dagang utama sekaligus rebutan global antara Kesultanan Islam dan Portugis!",
+    opsi: [
+      { imgPath: "./asset/img/selat_malaka.png", t: "Selat Malaka", b: true, msg: "Tepat! Selat Malaka adalah urat nadi perdagangan global yang menghubungkan Timur dan Barat." },
+      { imgPath: "./asset/img/selat_sunda.png", t: "Selat Sunda", b: false, msg: "Bukan! Selat Sunda berada di antara Pulau Jawa dan Sumatra." },
+      { imgPath: "./asset/img/selat_makassar.png", t: "Selat Makassar", b: false, msg: "Salah! Selat Makassar berada di dekat wilayah Gowa-Tallo." },
+      { imgPath: "./asset/img/laut_jawa.png", t: "Laut Jawa", b: false, msg: "Kurang tepat!" }
+    ]
+  },
+  {
+    t: "urut",
+    sub: "Konflik di Indonesia Timur",
+    ins: "Urutkan kronologi perjuangan Gowa-Tallo melawan hegemoni dan monopoli perdagangan Barat!",
+    urut: [
+      "Gowa-Tallo berkembang menjadi bandar transito perdagangan bebas",
+      "VOC Belanda mulai memaksakan monopoli dagang rempah-rempah",
+      "Sultan Hasanuddin memimpin pertahanan militer melawan aliansi VOC",
+      "Penandatanganan Perjanjian Bongaya yang membatasi kedaulatan Gowa"
+    ]
+  },
+  {
+    t: "sambung",
+    sub: "Transisi Politik Demak",
+    ins: "Lanjutkan hubungan sebab-akibat transisi politik internal pasca-gugurnya Pati Unus!",
+    hasil: "Perebutan kekuasaan internal memperlemah Demak hingga pusat pemerintahan dipindahkan dan berubah menjadi Kesultanan Pajang.",
+    steps: [
+      {
+        prev: "Setelah Pati Unus wafat, takhta Kesultanan Demak dipegang oleh adiknya, yaitu ...",
+        benar: "Sultan Trenggono",
+        salah: ["Sultan Ageng Tirtayasa", "Sultan Baabullah"]
+      },
+      {
+        prev: "Pasca-wafatnya Sultan Trenggono, internal Demak mengalami ...",
+        benar: "Perang saudara memperebutkan takhta",
+        salah: ["Kemakmuran wilayah global", "Kerja sama militer dengan Portugis"]
+      }
+    ]
+  },
+  {
+    t: "kumpul",
+    sub: "Ulama Penyebar Islam Nusantara",
+    ins: "Ketuk tokoh ulama/Walisongo penyebar Islam di Nusantara! Hindari nama tokoh agama masa kuno.",
+    benar: "./asset/img/tokoh_walisongo.png",
+    salah: [
+      "./asset/img/tokoh_pendeta.png",
+      "./asset/img/tokoh_fa_hsien.png"
+    ]
+  }
+];
+
+/* --- BERLATIH (10 SOAL PG EVALUASI) --- */
+const dtLatih = [
+  {
+    t: "pg",
+    stimulus: "<b>Catatan Perjalanan Ibnu Batutah:</b> Musafir Maroko Ibnu Batutah mencatat bahwa pada abad ke-14 penguasa Samudera Pasai sangat taat beragama dan menjalankan diskusi keagamaan. Pelabuhannya sangat sibuk melayani transit kapal dagang dari Tiongkok, India, dan Timur Tengah.",
+    soal: "Berdasarkan stimulus di atas, peristiwa penting dalam lingkup global pada masa Samudera Pasai ditunjukkan oleh...",
+    opsi: [
+      "Penggunaan mata uang emas secara lokal oleh seluruh masyarakat",
+      "Hubungan dagang internasional dan interaksi transito dengan pelaut berbagai benua",
+      "Pengadopsian sistem kasta keagamaan dalam tatanan istana sultan",
+      "Kerja sama militer penaklukan kerajaan pedalaman di Jawa",
+      "Penerapan hukum adat secara sepihak di kawasan Asia Tenggara"
+    ],
+    j: 1,
+    msg: "Interaksi transito internasional dengan Tiongkok, India, dan Timur Tengah mencerminkan kedudukan Samudera Pasai dalam jaringan lingkup global."
+  },
+  {
+    t: "pg",
+    stimulus: "<b>Konflik Maritim di Selat Malaka:</b> Malaka jatuh ke tangan Portugis pada tahun 1511. Hal ini mengganggu stabilitas jalur perdagangan nasional para pedagang Islam di Nusantara, sehingga mendorong respons militer dari wilayah lain.",
+    soal: "Serangan militer bersenjata armada maritim Kesultanan Demak di bawah pimpinan Pati Unus ke Malaka pada tahun 1513 merupakan peristiwa penting nasional-global yang bertujuan untuk...",
+    opsi: [
+      "Membantu Portugis menaklukkan kerajaan-kerajaan Hindu di Sumatra",
+      "Membendung monopoli perdagangan Portugis dan merebut kembali jalur Selat Malaka",
+      "Mendirikan pangkalan militer baru untuk menguasai jalur perdagangan lada",
+      "Mencari dukungan dari negara barat guna memperluas wilayah agraris Demak",
+      "Menjalin pakta pertahanan bersama antara Demak, Portugis, dan Majapahit"
+    ],
+    j: 1,
+    msg: "Serangan Pati Unus bertujuan membendung monopoli dagang Portugis di Malaka yang mengancam stabilitas jaringan ekonomi nasional."
+  },
+  {
+    t: "pg",
+    stimulus: "<b>Diplomasi Kesultanan Maritim:</b> Menghadapi ancaman blockade dan serangan militer Portugis, Kesultanan Aceh Darussalam tidak tinggal diam. Mereka memperkuat persenjataan dan melakukan langkah strategis luar negeri.",
+    soal: "Langkah diplomasi internasional global yang dilakukan Kesultanan Aceh Darussalam untuk menghadapi agresi Portugis adalah...",
+    opsi: [
+      "Meminta bantuan perlindungan militer kepada Kerajaan Sriwijaya",
+      "Menjalin hubungan diplomatik dan militer erat dengan Kekaisaran Turki Utsmani",
+      "Membeli seluruh persenjataan perang dari pedagang Portugis di Malaka",
+      "Menyerahkan wilayah pantai barat Sumatra kepada kongsi dagang VOC",
+      "Mengadakan perjanjian damai pembagian wilayah dengan dinasti lokal Tiongkok"
+    ],
+    j: 1,
+    msg: "Aceh menjalin hubungan diplomatik global dengan Turki Utsmani yang membalasnya dengan mengirimkan bantuan meriam, senjata, dan ahli militer."
+  },
+  {
+    t: "pg",
+    stimulus: "<b>Kebijakan Laut Bebas (Mare Liberum):</b> Kerajaan Gowa-Tallo di Makassar menerapkan sistem perdagangan terbuka dan adil. Prinsip ini menarik para pedagang lokal maupun internasional, namun mengusik kenyamanan serikat dagang Barat.",
+    soal: "Pernyataan yang benar mengenai dampak kebijakan perdagangan bebas Gowa-Tallo bagi lingkup nasional dan global adalah...",
+    opsi: [
+      "Makassar terisolasi dari jalur perdagangan rempah-rempah internasional",
+      "Gowa-Tallo langsung tunduk tanpa perlawanan kepada kongsi dagang VOC",
+      "Makassar tumbuh jadi bandar transito utama yang memicu konflik monopoli dengan VOC",
+      "Sultan Hasanuddin bersekutu dengan VOC untuk menyerang kerajaan lokal Bone",
+      "Seluruh rakyat Makassar dilarang melakukan pelayaran melewati Selat Malaka"
+    ],
+    j: 2,
+    msg: "Kebijakan laut bebas memakmurkan Makassar sebagai pelabuhan transito regional, namun memicu benturan keras dengan ambisi monopoli VOC."
+  },
+  {
+    t: "pg",
+    stimulus: "<b>Transisi Masa Hindu-Buddha ke Islam:</b> Runtuhnya Majapahit melahirkan babak baru politik di Nusantara. Kekuasaan tidak lagi terpusat di pedalaman berbasis agraris Hindu-Buddha, melainkan bergeser ke pesisir.",
+    soal: "Peralihan dari masa Hindu-Buddha menuju masa Islam di Pulau Jawa ditandai secara politik oleh peristiwa penting, yaitu...",
+    opsi: [
+      "Dukungan Walisongo terhadap berdirinya Kesultanan Demak sebagai pusat kekuasaan baru",
+      "Pindahnya seluruh keluarga dan rakyat Majapahit ke Semenanjung Malaya",
+      "Pembangunan Candi Prambanan dan Borobudur oleh Raden Patah",
+      "Masuknya pasukan militer asing Portugis ke pedalaman Jawa Tengah",
+      "Penghapusan total seluruh pelabuhan dagang di pesisir utara Jawa"
+    ],
+    j: 0,
+    msg: "Berdirinya Demak dengan sokongan penuh dari Walisongo menandai berakhirnya era Majapahit dan dimulainya dominasi kerajaan Islam di Jawa."
+  },
+  {
+    t: "pg",
+    stimulus: "<b>Hukum Adat dan Tata Pemerintahan:</b> Kesultanan Aceh Darussalam menyusun kitab hukum tata negara yang mengintegrasikan ajaran Islam ke dalam adat-istiadat lokal masyarakat setempat.",
+    soal: "Kitab hukum tata pemerintahan berlandaskan syariat Islam dalam lingkup lokal Kesultanan Aceh dikenal dengan nama...",
+    opsi: [
+      "Perjanjian Bongaya",
+      "Hukum Kanun Pajang",
+      "Adat Meukuta Alam",
+      "Kitab Negarakertagama",
+      "Prasasti Mulawarman"
+    ],
+    j: 2,
+    msg: "Adat Meukuta Alam merupakan landasan hukum lokal Kesultanan Aceh yang disusun untuk mengatur pemerintahan berdasarkan syariat Islam."
+  },
+  {
+    t: "pg",
+    stimulus: "<b>Konflik dan Penyelesaian Diplomasi:</b> Akibat perang berkepanjangan melawan kekuatan militer terpadu VOC Belanda dan sekutu lokalnya, Sultan Hasanuddin terpaksa menyetujui penyelesaian kesepakatan tertulis.",
+    soal: "Perjanjian yang membatasi kedaulatan maritim Kerajaan Gowa-Tallo dan menandai kemenangan hegemoni VOC di Indonesia Timur adalah...",
+    opsi: [
+      "Perjanjian Tordesillas",
+      "Perjanjian Bongaya",
+      "Perjanjian Saragosa",
+      "Kapitulasi Tuntang",
+      "Perjanjian Gianti"
+    ],
+    j: 1,
+    msg: "Perjanjian Bongaya (1667) mematikan sistem perdagangan bebas Gowa-Tallo dan memaksakan pengaruh monopoli VOC di Makassar."
+  },
+  {
+    t: "pg",
+    stimulus: "<b>Jaringan Distribusi Komoditas Global:</b> Lada dan cengkih merupakan komoditas utama yang menggerakkan roda ekonomi internasional di Nusantara sejak masa kuno hingga masa kerajaan Islam.",
+    soal: "Keterkaitan peristiwa penting antara produsen rempah Maluku dan pelabuhan transito Gowa-Tallo menunjukkan analisis sejarah dalam lingkup...",
+    opsi: [
+      "Lokal pedalaman saja",
+      "Nasional atau regional antarpulau",
+      "Global eropa barat semata",
+      "Kontinental asia tengah",
+      "Prasejarah purbakala"
+    ],
+    j: 1,
+    msg: "Hubungan ekonomi antarpulau (Maluku sebagai produsen dan Makassar sebagai pengumpul) mencerminkan jaringan lingkup nasional/regional."
+  },
+  {
+    t: "pg",
+    stimulus: "<b>Hubungan Internasional Kerajaan Islam Pertama:</b> Letak geografis yang berada tepat di pintu masuk Selat Malaka memberikan keuntungan luar biasa bagi penguasa awal di Sumatra Utara.",
+    soal: "Pendiri sekaligus sultan pertama dari Kerajaan Samudera Pasai yang meletakkan dasar politik keagamaan Islam di Nusantara bernama...",
+    opsi: [
+      "Sultan Trenggono",
+      "Raden Patah",
+      "Sultan Iskandar Muda",
+      "Marah Silu (Sultan Malik as-Saleh)",
+      "Sultan Hasanuddin"
+    ],
+    j: 3,
+    msg: "Marah Silu mendapat gelar Sultan Malik as-Saleh setelah memeluk Islam dan mendirikan Kerajaan Samudera Pasai pada abad ke-13."
+  },
+  {
+    t: "pg",
+    stimulus: "<b>Aktivitas Maritim Jalur Sutra Laut:</b> Masuknya pengaruh Islam ke wilayah Nusantara tidak lepas dari ramainya pelayaran internasional yang menghubungkan berbagai peradaban besar dunia.",
+    soal: "Faktor pendorong global utama yang mempermudah proses Islamisasi di sepanjang kota-kota pelabuhan Nusantara adalah...",
+    opsi: [
+      "Terjadinya Revolusi Industri yang melanda seluruh wilayah daratan Eropa",
+      "Ramainya jalur perdagangan maritim laut internasional Arab, India, Nusantara, dan Tiongkok",
+      "Penemuan mesin cetak modern oleh Johannes Gutenberg di Jerman",
+      "Penaklukan militer secara paksa oleh Dinasti Umayyah ke pedalaman Sumatra",
+      "Keputusan sepihak VOC untuk menyebarkan agama ke seluruh Asia Tenggara"
+    ],
+    j: 1,
+    msg: "Jalur sutra laut internasional menempatkan pelabuhan Nusantara sebagai titik transit strategis, mempermudah interaksi budaya dan dakwah para pedagang Muslim."
+  }
+];
+
+/* ##############################################################
+   #  BAGIAN B — MESIN APLIKASI UTAMA                          #
+   ############################################################## */
+
+function imgErr(el){
+  el.onerror=null;
+  const label=(el.alt||'gambar').replace(/[<>&]/g,'').slice(0,20);
+  const svg="<svg xmlns='http://www.w3.org/2000/svg' width='220' height='160'><rect width='100%' height='100%' rx='14' fill='#F1F5F9' stroke='#CBD5E1' stroke-width='3' stroke-dasharray='9'/><text x='50%' y='44%' font-size='44' text-anchor='middle'>🖼️</text><text x='50%' y='74%' font-size='15' font-family='sans-serif' font-weight='bold' text-anchor='middle' fill='#64748B'>"+label+"</text></svg>";
+  el.src="data:image/svg+xml;utf8,"+encodeURIComponent(svg);
+}
+
+function setTxt(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; }
+function setSrc(id,v){ const e=document.getElementById(id); if(e) e.setAttribute('src',v); }
+
+function applyConfig(){
+  const C=CONFIG;
+  setTxt('cfg-fase',C.fase); setTxt('cfg-judul',C.judul); setTxt('cfg-subjudul',C.subJudul);
+  setSrc('cfg-logo',C.logo); setSrc('cfg-bgjudul',C.bgJudul); setTxt('cfg-judul-menu',C.judul);
+  setTxt('cfg-mapel',C.mapel); setTxt('cfg-unit',C.unit); setTxt('cfg-subunit',C.subUnit); setTxt('cfg-tp',C.tp);
+  setTxt('cfg-nama',C.profil.nama); setTxt('cfg-nama2',C.profil.nama);
+  setTxt('cfg-instansi',C.profil.instansi); setTxt('cfg-jenis',C.profil.jenis); setSrc('cfg-foto',C.profil.foto);
+  document.title=C.judul+' — MPI';
+}
+
+const stage = document.getElementById('stage');
+function resizeStage(){
+  const w = window.innerWidth, h = window.innerHeight;
+  const scale = Math.min(w/1280, h/720);
+  stage.style.transform = 'scale(' + scale + ')';
+  stage.style.left = ((w - 1280*scale)/2) + 'px';
+  stage.style.top  = ((h - 720*scale)/2) + 'px';
+}
+window.addEventListener('resize', resizeStage); 
+
+/* ---- AUDIO SYSTEM ---- */
+let soundOn = true, globalVolume = 1;
+const AUDIO = {};
+function loadAudio(key, src){ try{ const a=new Audio(src); a.preload='auto'; AUDIO[key]=a; }catch(e){} }
+loadAudio('bgm','./asset/audio/bgm.mp3'); if(AUDIO['bgm']) AUDIO['bgm'].loop = true;
+loadAudio('klik','./asset/audio/sfx_klik.mp3');
+loadAudio('benar','./asset/audio/sfx_benar.mp3');
+loadAudio('salah','./asset/audio/sfx_salah.mp3');
+loadAudio('transisi','./asset/audio/sfx_transisi.mp3');
+loadAudio('bintang','./asset/audio/sfx_bintang.mp3');
+
+function play(key){
+  if(!soundOn || globalVolume === 0) return;
+  const a = AUDIO[key]; if(!a) return;
+  try{ a.volume = globalVolume; if(key !== 'bgm') a.currentTime=0; const p=a.play(); if(p&&p.catch) p.catch(()=>{}); } catch(e){}
+}
+
+function changeVolume(val){
+  globalVolume = parseFloat(val);
+  const btn = document.getElementById('sound-toggle');
+  if (globalVolume === 0){ soundOn=false; btn.textContent='🔇'; }
+  else { soundOn=true; btn.textContent = globalVolume<0.5?'🔉':'🔊'; if(AUDIO['bgm'] && AUDIO['bgm'].paused) play('bgm'); }
+  for(let k in AUDIO){ if(AUDIO[k]) AUDIO[k].volume = globalVolume; }
+}
+
+function toggleSound(){
+  const slider = document.getElementById('volume-slider'); const btn = document.getElementById('sound-toggle');
+  if(soundOn){ soundOn=false; slider.value=0; btn.textContent='🔇'; for(let k in AUDIO){ if(AUDIO[k]){ AUDIO[k].volume=0; if(k==='bgm') AUDIO[k].pause(); } } }
+  else { soundOn=true; globalVolume = globalVolume===0?1:globalVolume; slider.value=globalVolume; btn.textContent='🔊'; for(let k in AUDIO){ if(AUDIO[k]) AUDIO[k].volume=globalVolume; } play('bgm'); }
+}
+
+document.addEventListener('click', function(e){
+  const t = e.target.closest('[data-sfx]'); if(t && t.getAttribute('data-sfx') !== 'no') play('klik');
+});
+
+function triggerSalah(){ const el=document.getElementById('efek-salah'); if(el){ el.classList.add('nyala'); setTimeout(()=>el.classList.remove('nyala'),50);} }
+function showConfetti(){
+  const container=document.getElementById('stage');
+  const colors=['#E63946','#F4A261','#2ECC71','#E74C3C','#ffffff','#7209B7','#2D6A4F'];
+  for(let i=0;i<60;i++){
+    const conf=document.createElement('div'); conf.className='confetti';
+    conf.style.left='50%'; conf.style.top='50%';
+    conf.style.backgroundColor=colors[Math.floor(Math.random()*colors.length)];
+    const angle=Math.random()*Math.PI*2, velocity=100+Math.random()*400;
+    conf.style.setProperty('--tx', (Math.cos(angle)*velocity)+'px');
+    conf.style.setProperty('--ty', (Math.sin(angle)*velocity-200)+'px');
+    if(Math.random()>0.5) conf.style.borderRadius='50%';
+    container.appendChild(conf); setTimeout(()=>conf.remove(),1500);
+  }
+}
+
+/* ---- IDENTITAS ---- */
+let infoMurid = { nama:"Murid Hebat", sekolah:"-" };
+function simpanIdentitas(){
+  const nm=document.getElementById('in-nama').value.trim();
+  const sk=document.getElementById('in-sekolah').value.trim();
+  const pesan=document.getElementById('login-pesan');
+  if(!nm){ pesan.style.display='block'; return; }
+  infoMurid.nama=nm; infoMurid.sekolah=sk||"-";
+  closeModal('modal-login'); play('bgm'); goMenu();
+}
+
+function openModal(id){ const el=document.getElementById(id); if(el) el.classList.add('show'); }
+function closeModal(id){ const el=document.getElementById(id); if(el) el.classList.remove('show'); }
+
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function getOffset(el, parent){ let top=0,left=0; while(el&&el!==parent){ top+=el.offsetTop; left+=el.offsetLeft; el=el.offsetParent; } return {top,left}; }
+
+function drawLine(el1, el2, containerId){
+  const wrap=document.getElementById(containerId);
+  if(!wrap) return;
+  let svg=wrap.querySelector('.jodoh-svg');
+  if(!svg){
+    svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('class','jodoh-svg');
+    svg.style.position='absolute'; svg.style.top='0'; svg.style.left='0'; svg.style.width='100%'; svg.style.height='100%'; svg.style.pointerEvents='none'; svg.style.zIndex='0';
+    wrap.appendChild(svg);
+  }
+  const o1=getOffset(el1,wrap), o2=getOffset(el2,wrap);
+  const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1', o1.left+el1.offsetWidth); line.setAttribute('y1', o1.top+el1.offsetHeight/2);
+  line.setAttribute('x2', o2.left); line.setAttribute('y2', o2.top+el2.offsetHeight/2);
+  line.setAttribute('stroke','#27AE60'); line.setAttribute('stroke-width','5'); line.setAttribute('stroke-linecap','round'); line.setAttribute('class','jodoh-line');
+  svg.appendChild(line);
+}
+
+function setProgress(fillId, labelId, cur, total){ document.getElementById(fillId).style.width=(cur/total*100)+'%'; document.getElementById(labelId).textContent=cur+'/'+total; }
+function showFb(id,kind,msg){ const fb=document.getElementById(id); if(!fb) return; fb.className='feedback show '+kind; fb.innerHTML=msg; }
+
+function showScreen(id){
+  clearKumpul();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const aw=document.getElementById('audio-widget'); if(aw) aw.style.display=(id==='scr-judul')?'none':'flex';
+  if(id!=='scr-judul') play('transisi'); resizeStage();
+}
+function goJudul(){ showScreen('scr-judul'); }
+function goMenu(){ showScreen('scr-menu'); }
+
+/* ============================================================
+   BELAJAR
+   ============================================================ */
+const belajar = { step:0 };
+function startBelajar(){ belajar.step=0; showScreen('scr-belajar'); renderBelajar(); }
+function renderBelajar(){
+  const total=MATERI.length;
+  setProgress('belajar-pfill','belajar-plabel', belajar.step+1, total);
+  const m=MATERI[belajar.step];
+  document.getElementById('belajar-sub').textContent=m.judul;
+  document.getElementById('belajar-prev').textContent = belajar.step===0 ? "☰ Menu" : "◀ Sebelumnya";
+  document.getElementById('belajar-next').textContent = belajar.step===total-1 ? "Selesai ✔" : "Selanjutnya ▶";
+  let kuisHTML='';
+  if(m.kuis){
+    kuisHTML=`<div class="belajar-kuis">
+      <p class="bk-tanya">✨ Ayo Tebak! &nbsp; ${m.kuis.tanya}</p>
+      <div class="bk-opsi">
+        <button class="btn btn-kuning" style="padding:10px 20px;font-size:16px;" onclick="cekKuisMini(this, ${m.kuis.j===0})">${m.kuis.o[0]}</button>
+        <button class="btn btn-kuning" style="padding:10px 20px;font-size:16px;" onclick="cekKuisMini(this, ${m.kuis.j===1})">${m.kuis.o[1]}</button>
+      </div></div>`;
+  }
+  document.getElementById('belajar-content').innerHTML = `
+    <div class="belajar-frame">
+      <div class="belajar-img-sisi"><img src="${m.img}" alt="${m.judul}" onerror="imgErr(this)"></div>
+      <div class="belajar-teks-sisi">
+        <h2>${m.judul}</h2>
+        <div class="belajar-intro">${m.intro}</div>
+        <div class="belajar-isi">${m.isi}</div>
+        ${kuisHTML}
+      </div>
+    </div>`;
+}
+function cekKuisMini(btn, isBenar){
+  play('klik'); btn.parentNode.querySelectorAll('button').forEach(b=>b.disabled=true);
+  if(isBenar){ btn.style.background='var(--hijau-tua)'; btn.style.color='#fff'; btn.innerHTML+=' ✔️'; play('benar'); showConfetti(); }
+  else { btn.style.background='var(--salah)'; btn.style.color='#fff'; btn.innerHTML+=' ❌'; play('salah'); triggerSalah(); }
+}
+function belajarNext(){ if(belajar.step < MATERI.length-1){ belajar.step++; renderBelajar(); } else goMenu(); }
+function belajarPrev(){ if(belajar.step > 0){ belajar.step--; renderBelajar(); } else goMenu(); }
+
+/* ============================================================
+   DETEKTIF SEJARAH (C3 - MENGAPLIKASIKAN)
+   ============================================================ */
+let museumState = { index: 0, status: [false, false, false], ans1: null, ans2: null };
+
+function startMuseum(){
+  museumState = { index: 0, status: [false, false, false], ans1: null, ans2: null };
+  showScreen('scr-museum');
+  renderMuseum();
+}
+
+function renderMuseum(){
+  const art = dataMuseum[museumState.index];
+  document.getElementById('museum-teridentifikasi').textContent = museumState.status.filter(x=>x).length;
+  document.getElementById('museum-next').disabled = !museumState.status[museumState.index];
+
+  let listHTML = '';
+  dataMuseum.forEach((item, idx) => {
+    const isAct = idx === museumState.index ? 'active' : '';
+    const isFin = museumState.status[idx] ? 'selesai' : '';
+    listHTML += `
+      <div class="museum-artefak-card ${isAct} ${isFin}" onclick="pilihArtefakMuseum(${idx})">
+        <img src="${item.img}" alt="${item.namaArtefak}" onerror="imgErr(this)">
+        <div class="museum-artefak-info">
+          <div class="title">${item.namaArtefak}</div>
+          <div class="status">${museumState.status[idx] ? '✅ Terverifikasi' : '🔍 Perlu Analisis'}</div>
+        </div>
+      </div>
+    `;
+  });
+
+  let opsi1HTML = '';
+  art.opsi1.forEach((o, i) => {
+    opsi1HTML += `<button class="museum-opsi-btn" id="m-o1-${i}" onclick="jawabMuseum(1, ${i}, ${o.benar})">${o.text}</button>`;
+  });
+
+  let opsi2HTML = '';
+  art.opsi2.forEach((o, i) => {
+    opsi2HTML += `<button class="museum-opsi-btn" id="m-o2-${i}" onclick="jawabMuseum(2, ${i}, ${o.benar})">${o.text}</button>`;
+  });
+
+  document.getElementById('museum-content').innerHTML = `
+    <div class="museum-wrapper">
+      <div class="museum-sidebar">
+        <div class="museum-role-badge">🕵️ Roleplay: Detektif Sejarah</div>
+        <div class="museum-skenario">
+          <b>Misi Lapangan:</b> Analisis artefak tanpa label ini, tentukan fungsi/makna sejarahnya, lalu kelompokkan ke zona pameran yang sesuai!
+        </div>
+        <div class="museum-artefak-list">${listHTML}</div>
+      </div>
+      <div class="museum-main">
+        <div class="museum-header-zone">
+          <h3>🕵️ Studi Kasus Artefak #${art.id}: ${art.namaArtefak}</h3>
+          <span style="font-size:13px; font-weight:800; color:var(--toska); background:#E8F8F0; padding:6px 14px; border-radius:99px;">Kategori: ${art.kategori}</span>
+        </div>
+        <div class="museum-case-box">${art.skenario}</div>
+        
+        <div class="museum-q-section">
+          <div class="museum-q-title">${art.tanya1}</div>
+          <div class="museum-opsi-grid" id="grid-m-1">${opsi1HTML}</div>
+        </div>
+
+        <div class="museum-q-section" id="sec-m-2" style="display:${museumState.ans1 !== null ? 'flex' : 'none'}">
+          <div class="museum-q-title">${art.tanya2}</div>
+          <div class="museum-opsi-grid" id="grid-m-2">${opsi2HTML}</div>
+        </div>
+
+        <div class="feedback" id="museum-fb"></div>
+      </div>
+    </div>
+  `;
+
+  if(museumState.status[museumState.index]){
+    showFb('museum-fb', 'ok', art.fbBenar);
+  }
+}
+
+function pilihArtefakMuseum(idx){
+  play('klik');
+  museumState.index = idx;
+  museumState.ans1 = null;
+  museumState.ans2 = null;
+  renderMuseum();
+}
+
+function jawabMuseum(step, oIdx, isBenar){
+  const art = dataMuseum[museumState.index];
+  if(step === 1){
+    play(isBenar ? 'benar' : 'salah');
+    const btns = document.querySelectorAll('#grid-m-1 .museum-opsi-btn');
+    btns.forEach(b => b.classList.remove('terpilih','benar','salah'));
+    const target = document.getElementById(`m-o1-${oIdx}`);
+    if(isBenar){
+      target.classList.add('benar');
+      museumState.ans1 = oIdx;
+      showFb('museum-fb', 'ok', '<b>Langkah 1 Berhasil!</b> Sekarang lanjutkan ke Langkah 2 (Aplikasi Fungsi/Zona Galeri).');
+      document.getElementById('sec-m-2').style.display = 'flex';
+    } else {
+      target.classList.add('salah');
+      triggerSalah();
+      showFb('museum-fb', 'no', art.fbSalah);
+    }
+  } else if(step === 2){
+    play(isBenar ? 'benar' : 'salah');
+    const btns = document.querySelectorAll('#grid-m-2 .museum-opsi-btn');
+    btns.forEach(b => b.classList.remove('terpilih','benar','salah'));
+    const target = document.getElementById(`m-o2-${oIdx}`);
+    if(isBenar){
+      target.classList.add('benar');
+      museumState.ans2 = oIdx;
+      museumState.status[museumState.index] = true;
+      showConfetti();
+      showFb('museum-fb', 'ok', art.fbBenar);
+      document.getElementById('museum-teridentifikasi').textContent = museumState.status.filter(x=>x).length;
+      document.getElementById('museum-next').disabled = false;
+      renderMuseum();
+    } else {
+      target.classList.add('salah');
+      triggerSalah();
+      showFb('museum-fb', 'no', art.fbSalah);
+    }
+  }
+}
+
+function museumNextStep(){
+  if(museumState.index < dataMuseum.length - 1){
+    museumState.index++;
+    museumState.ans1 = null;
+    museumState.ans2 = null;
+    renderMuseum();
+  } else {
+    play('bintang');
+    showConfetti();
+    document.getElementById('museum-content').innerHTML = `
+      <div class="akhir">
+        <h2>🔍 Misi Detektif Sejarah Selesai!</h2>
+        <div class="identitas">${infoMurid.nama} • ${infoMurid.sekolah}</div>
+        <p style="font-size:20px; margin-top:16px;">Selamat! Kamu telah berhasil memecahkan 3 studi kasus sejarah dan memverifikasi seluruh artefak sebagai <b>Detektif Sejarah & Kurator Handal</b>.</p>
+        <div style="display:flex; gap:16px; margin-top:20px">
+          <button class="btn btn-toska" style="height:54px; padding:0 28px; font-size:18px" onclick="startMuseum()">🔄 Ulangi Studi Kasus</button>
+          <button class="btn btn-merah" style="height:54px; padding:0 28px; font-size:18px" onclick="goMenu()">☰ Menu Utama</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('museum-next').disabled = true;
+  }
+}
+
+/* ============================================================
+   BERMAIN
+   ============================================================ */
+let skorBermain=0, main={step:0}, activeGame=null;
+function tambahSkor(val){ skorBermain=Math.max(0,skorBermain+val); document.getElementById('skor-bermain-angka').textContent=skorBermain; }
+function startBermain(){ main.step=0; skorBermain=0; tambahSkor(0); showScreen('scr-bermain'); renderBermain(); }
+function bermainNext(){ if(main.step<dataBermain.length-1){ main.step++; renderBermain(); } else { clearKumpul(); renderSkorBermain(); } }
+function bermainPrev(){
+  clearKumpul();
+  if(main.step>0){ main.step--; renderBermain(); } else goMenu();
+}
+
+let kumpulTimer=null, kumpulSpawnInterval=null;
+function clearKumpul(){ if(kumpulTimer) clearInterval(kumpulTimer); if(kumpulSpawnInterval) clearInterval(kumpulSpawnInterval); kumpulTimer=null; kumpulSpawnInterval=null; }
+
+function renderBermain(){
+  clearKumpul();
+  const total=dataBermain.length;
+  setProgress('bermain-pfill','bermain-plabel', main.step+1, total);
+  const g=dataBermain[main.step];
+  document.getElementById('bermain-sub').textContent=`Game ${main.step+1}: ${g.sub}`;
+  document.getElementById('bermain-next').disabled=true;
+  
+  const c=document.getElementById('bermain-content');
+  c.innerHTML = `<div class="akt-instruksi">🎮 <b>${g.sub}:</b> ${g.ins}</div><div id="game-body" style="flex:1; display:flex; flex-direction:column; min-height:0"></div><div class="feedback" id="bermain-fb"></div>`;
+  const body=document.getElementById('game-body');
+
+  if(g.t==='jodoh'){
+    let leftHTML='', rightHTML='';
+    let shuffledImgs = shuffle(g.imgs);
+    g.pairs.forEach(p => {
+      leftHTML += `<div class="pair-item" data-left="${p.n}" onclick="pilihJodohLeft(this)">${p.t}</div>`;
+    });
+    shuffledImgs.forEach(m => {
+      rightHTML += `<div class="pair-item" data-right="${m.n}" onclick="pilihJodohRight(this)"><img src="${m.i}" class="img-pair" onerror="imgErr(this)"><span>${m.name}</span></div>`;
+    });
+    body.innerHTML = `<div class="jodoh-wrap" id="jodoh-container"><div class="jodoh-kol">${leftHTML}</div><div class="jodoh-kol">${rightHTML}</div></div>`;
+    activeGame = { type:'jodoh', selLeft:null, selRight:null, count:0, target:g.pairs.length };
+  }
+  else if(g.t==='klik'){
+    let gridHTML='';
+    g.opsi.forEach((o,i)=>{
+      gridHTML+=`<div class="obj-card" onclick="jawabKlikGame(this, ${o.b}, '${o.msg.replace(/'/g,"\\'")}')"><img src="${o.imgPath}" class="img-obj" onerror="imgErr(this)"><span>${o.t}</span></div>`;
+    });
+    body.innerHTML=`<div class="scene-grid">${gridHTML}</div>`;
+  }
+  else if(g.t==='urut'){
+    let items = shuffle(g.urut.map((text, idx) => ({ text, origIdx: idx })));
+    activeGame = { type:'urut', items, target: g.urut };
+    renderUrutList();
+  }
+  else if(g.t==='kumpul'){
+    body.innerHTML = `
+      <div class="kumpul-hud">
+        <div class="hud-box hud-time">⏱️ Sisa Waktu: <span id="kumpul-time">15</span>s</div>
+        <div class="hud-box hud-coll">⭐ Artefak Terkumpul: <span id="kumpul-score">0</span></div>
+      </div>
+      <div class="kumpul-area" id="kumpul-area"></div>
+    `;
+    startKumpulGame(g);
+  }
+  else if(g.t==='sambung'){
+    activeGame = { type:'sambung', stepIdx:0, steps: g.steps, hasil: g.hasil };
+    renderSambungStep();
+  }
+}
+
+function pilihJodohLeft(el){
+  if(el.classList.contains('locked')) return;
+  play('klik');
+  const parent = document.getElementById('jodoh-container');
+  parent.querySelectorAll('[data-left]').forEach(x => x.classList.remove('sel'));
+  el.classList.add('sel');
+  activeGame.selLeft = el;
+  cekJodohMatch();
+}
+
+function pilihJodohRight(el){
+  if(el.classList.contains('locked')) return;
+  play('klik');
+  const parent = document.getElementById('jodoh-container');
+  parent.querySelectorAll('[data-right]').forEach(x => x.classList.remove('sel'));
+  el.classList.add('sel');
+  activeGame.selRight = el;
+  cekJodohMatch();
+}
+
+function cekJodohMatch(){
+  if(activeGame.selLeft && activeGame.selRight){
+    const lVal = activeGame.selLeft.getAttribute('data-left');
+    const rVal = activeGame.selRight.getAttribute('data-right');
+    const lEl = activeGame.selLeft;
+    const rEl = activeGame.selRight;
+    
+    if(lVal === rVal){
+      play('benar');
+      lEl.classList.remove('sel'); lEl.classList.add('locked');
+      rEl.classList.remove('sel'); rEl.classList.add('locked');
+      drawLine(lEl, rEl, 'jodoh-container');
+      activeGame.selLeft = null; activeGame.selRight = null;
+      activeGame.count++;
+      tambahSkor(10);
+      if(activeGame.count === activeGame.target){
+        showConfetti();
+        showFb('bermain-fb','ok','<b>Hebat!</b> Kamu berhasil memasangkan seluruh kartu dengan benar (+10 Skor)');
+        document.getElementById('bermain-next').disabled = false;
+      }
+    } else {
+      play('salah'); triggerSalah();
+      lEl.classList.add('salah'); rEl.classList.add('salah');
+      setTimeout(()=>{
+        lEl.classList.remove('sel','salah');
+        rEl.classList.remove('sel','salah');
+      }, 500);
+      activeGame.selLeft = null; activeGame.selRight = null;
+    }
+  }
+}
+
+function jawabKlikGame(btn, isBenar, msg){
+  const body = document.getElementById('game-body');
+  body.querySelectorAll('.obj-card').forEach(c => c.style.pointerEvents = 'none');
+  if(isBenar){
+    btn.classList.add('benar'); play('benar'); showConfetti(); tambahSkor(10);
+    showFb('bermain-fb','ok', msg);
+    document.getElementById('bermain-next').disabled = false;
+  } else {
+    btn.classList.add('salah'); play('salah'); triggerSalah();
+    showFb('bermain-fb','no', msg);
+    setTimeout(()=>{ body.querySelectorAll('.obj-card').forEach(c => c.style.pointerEvents = 'auto'); }, 1000);
+  }
+}
+
+function renderUrutList(){
+  const body = document.getElementById('game-body');
+  let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
+  activeGame.items.forEach((it, idx) => {
+    html += `
+      <div class="urut-item">
+        <div class="num">${idx + 1}</div>
+        <span>${it.text}</span>
+        <button class="btn btn-kuning" onclick="pindahUrut(${idx}, -1)">▲</button>
+        <button class="btn btn-kuning" onclick="pindahUrut(${idx}, 1)">▼</button>
+      </div>
+    `;
+  });
+  html += `</div><button class="btn btn-toska" style="height:50px; font-size:18px; margin-top:12px;" onclick="cekUrutanGame()">Periksa Urutan ✔</button>`;
+  body.innerHTML = html;
+}
+
+function pindahUrut(idx, dir){
+  play('klik');
+  const target = idx + dir;
+  if(target < 0 || target >= activeGame.items.length) return;
+  const temp = activeGame.items[idx];
+  activeGame.items[idx] = activeGame.items[target];
+  activeGame.items[target] = temp;
+  renderUrutList();
+}
+
+function cekUrutanGame(){
+  let isCorrect = true;
+  activeGame.items.forEach((it, idx) => {
+    if(it.origIdx !== idx) isCorrect = false;
+  });
+  if(isCorrect){
+    play('benar'); showConfetti(); tambahSkor(10);
+    showFb('bermain-fb','ok','<b>Sempurna!</b> Urutan kronologis peristiwa sejarah kamu sudah sangat tepat (+10 Skor).');
+    document.getElementById('bermain-next').disabled = false;
+  } else {
+    play('salah'); triggerSalah();
+    showFb('bermain-fb','no','<b>Urutan Belum Tepat!</b> Periksa kembali kronologi tahun/kejadiannya dan coba susun ulang.');
+  }
+}
+
+function startKumpulGame(g){
+  let timeLeft = 15;
+  let scoreLocal = 0;
+  const area = document.getElementById('kumpul-area');
+  
+  function spawnItem(){
+    if(!area) return;
+    const item = document.createElement('div');
+    item.className = 'kumpul-flag';
+    const isGood = Math.random() > 0.35;
+    const imgSrc = isGood ? g.benar : g.salah[Math.floor(Math.random()*g.salah.length)];
+    item.innerHTML = `<img src="${imgSrc}" onerror="imgErr(this)">`;
+    
+    const posX = Math.random() * (area.clientWidth - 90);
+    const posY = Math.random() * (area.clientHeight - 90);
+    item.style.left = Math.max(10, posX) + 'px';
+    item.style.top = Math.max(10, posY) + 'px';
+    
+    item.onclick = function(){
+      if(isGood){
+        play('benar'); scoreLocal++;
+        document.getElementById('kumpul-score').textContent = scoreLocal;
+        tambahSkor(5);
+        item.remove();
+      } else {
+        play('salah'); triggerSalah();
+        item.remove();
+      }
+    };
+    area.appendChild(item);
+    setTimeout(() => { if(item.parentNode) item.remove(); }, 1800);
+  }
+
+  kumpulSpawnInterval = setInterval(spawnItem, 600);
+  kumpulTimer = setInterval(() => {
+    timeLeft--;
+    const tEl = document.getElementById('kumpul-time');
+    if(tEl) tEl.textContent = timeLeft;
+    if(timeLeft <= 0){
+      clearKumpul();
+      showConfetti(); play('bintang');
+      showFb('bermain-fb','ok', `<b>Waktu Habis!</b> Kamu berhasil mengumpulkan ${scoreLocal} artefak Islam.`);
+      document.getElementById('bermain-next').disabled = false;
+    }
+  }, 1000);
+}
+
+function renderSambungStep(){
+  const body = document.getElementById('game-body');
+  const st = activeGame.steps[activeGame.stepIdx];
+  const allOps = shuffle([st.benar, ...st.salah]);
+  
+  let opsHTML = '';
+  allOps.forEach(o => {
+    opsHTML += `<button class="sambung-btn" onclick="jawabSambungStep('${o.replace(/'/g,"\\'")}', '${st.benar.replace(/'/g,"\\'")}')">${o}</button>`;
+  });
+
+  body.innerHTML = `
+    <div class="sambung-lirik">${st.prev}</div>
+    <div class="sambung-opsi">${opsHTML}</div>
+  `;
+}
+
+function jawabSambungStep(terpilih, benar){
+  if(terpilih === benar){
+    play('benar'); tambahSkor(5);
+    activeGame.stepIdx++;
+    if(activeGame.stepIdx < activeGame.steps.length){
+      renderSambungStep();
+    } else {
+      showConfetti();
+      document.getElementById('game-body').innerHTML = `<div class="sambung-lirik" style="background:var(--hijau-tua)">✨ <b>Hasil Lengkap:</b><br>${activeGame.hasil}</div>`;
+      showFb('bermain-fb','ok','<b>Luar Biasa!</b> Kamu berhasil menyambungkan seluruh rantai diplomasi global (+15 Skor).');
+      document.getElementById('bermain-next').disabled = false;
+    }
+  } else {
+    play('salah'); triggerSalah();
+    showFb('bermain-fb','no','<b>Pilihan Kurang Tepat!</b> Coba pilih jawaban lain yang sesuai dengan fakta sejarah.');
+  }
+}
+
+function renderSkorBermain(){
+  play('bintang'); showConfetti();
+  document.getElementById('bermain-content').innerHTML = `
+    <div class="akhir">
+      <h2>🎉 Permainan Selesai!</h2>
+      <div class="identitas">${infoMurid.nama} • ${infoMurid.sekolah}</div>
+      <p style="font-size:22px; margin:10px 0 0;">Total Skor yang Kamu Raih:</p>
+      <div class="skor-angka">${skorBermain}</div>
+      <p style="font-size:18px; color:#666;">Hebat! Kamu telah menyelesaikan 10 game interaktif sejarah Islam Nusantara.</p>
+      <button class="btn btn-kuning" style="height:60px; padding:0 40px; font-size:20px; margin-top:15px;" onclick="goMenu()">☰ Kembali ke Menu</button>
+    </div>
+  `;
+}
+
+/* ============================================================
+   BERLATIH (SOAL EVALUASI)
+   ============================================================ */
+let latih = { step: 0, jawaban: [], nilai: 0 };
+
+function startBerlatih(){
+  latih = { step: 0, jawaban: new Array(dtLatih.length).fill(null), nilai: 0 };
+  showScreen('scr-berlatih');
+  renderBerlatih();
+}
+
+function renderBerlatih(){
+  const total = dtLatih.length;
+  setProgress('berlatih-pfill','berlatih-plabel', latih.step + 1, total);
+  const q = dtLatih[latih.step];
+  document.getElementById('berlatih-sub').textContent = `Soal ${latih.step + 1} dari ${total}`;
+  document.getElementById('berlatih-next').disabled = (latih.jawaban[latih.step] === null);
+
+  let opsHTML = '';
+  const abcd = ['A', 'B', 'C', 'D', 'E'];
+  q.opsi.forEach((o, idx) => {
+    let cls = 'opsi';
+    if(latih.jawaban[latih.step] !== null){
+      if(idx === q.j) cls += ' benar';
+      else if(idx === latih.jawaban[latih.step]) cls += ' salah';
+    }
+    opsHTML += `
+      <div class="${cls}" onclick="pilihOpsiLatih(${idx})">
+        <div class="bul">${abcd[idx]}</div>
+        <div style="flex:1">${o}</div>
+      </div>
+    `;
+  });
+
+  document.getElementById('berlatih-content').innerHTML = `
+    <div class="soal-split">
+      <div class="soal-kiri">
+        <div class="soal-label">SOAL EVALUASI #${latih.step + 1}</div>
+        <div class="soal-stimulus">${q.stimulus}</div>
+        <div class="soal-teks">${q.soal}</div>
+      </div>
+      <div class="opsi-kanan">
+        <div class="opsi-list">${opsHTML}</div>
+        <div class="feedback" id="latih-fb"></div>
+      </div>
+    </div>
+  `;
+
+  if(latih.jawaban[latih.step] !== null){
+    const isCorrect = latih.jawaban[latih.step] === q.j;
+    showFb('latih-fb', isCorrect ? 'ok' : 'no', isCorrect ? `<b>Jawaban Tepat!</b> ${q.msg}` : `<b>Jawaban Kurang Tepat.</b> ${q.msg}`);
+  }
+}
+
+function pilihOpsiLatih(idx){
+  if(latih.jawaban[latih.step] !== null) return;
+  const q = dtLatih[latih.step];
+  latih.jawaban[latih.step] = idx;
+  const isCorrect = idx === q.j;
+  play(isCorrect ? 'benar' : 'salah');
+  if(!isCorrect) triggerSalah();
+  else showConfetti();
+  renderBerlatih();
+}
+
+function berlatihNext(){
+  if(latih.step < dtLatih.length - 1){
+    latih.step++;
+    renderBerlatih();
+  } else {
+    hitungNilaiLatih();
+  }
+}
+
+function berlatihPrev(){
+  if(latih.step > 0){
+    latih.step--;
+    renderBerlatih();
+  } else {
+    goMenu();
+  }
+}
+
+function hitungNilaiLatih(){
+  let benarCount = 0;
+  latih.jawaban.forEach((j, idx) => {
+    if(j === dtLatih[idx].j) benarCount++;
+  });
+  const nilaiAkhir = Math.round((benarCount / dtLatih.length) * 100);
+  play('bintang'); showConfetti();
+
+  document.getElementById('berlatih-content').innerHTML = `
+    <div class="akhir">
+      <h2>📊 Hasil Evaluasi Belajar</h2>
+      <div class="identitas">${infoMurid.nama} • ${infoMurid.sekolah}</div>
+      <p style="font-size:22px; margin:10px 0 0;">Nilai Akhir Evaluasi:</p>
+      <div class="skor-angka">${nilaiAkhir}</div>
+      <p style="font-size:18px; color:#555;">Jawaban Benar: <b>${benarCount}</b> dari <b>${dtLatih.length}</b> soal.</p>
+      <div style="display:flex; gap:16px; margin-top:15px">
+        <button class="btn btn-toska" style="height:54px; padding:0 30px; font-size:18px" onclick="startBerlatih()">🔄 Ulangi Evaluasi</button>
+        <button class="btn btn-merah" style="height:54px; padding:0 30px; font-size:18px" onclick="goMenu()">☰ Menu Utama</button>
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   REFLEKSI
+   ============================================================ */
+let bintangRefleksi = 5;
+
+function startRefleksi(){
+  bintangRefleksi = 5;
+  showScreen('scr-refleksi');
+  renderRefleksi();
+}
+
+function renderRefleksi(){
+  document.getElementById('refleksi-content').innerHTML = `
+    <div class="refleksi-container">
+      <div class="refleksi-head">
+        <h2>📝 Jurnal Refleksi Diri</h2>
+        <p>Ungkapkan kesan dan pemahaman yang kamu dapatkan selama belajar materi Kerajaan Islam.</p>
+      </div>
+      <div>
+        <div class="refleksi-q">1. Hal baru dan menarik apa yang paling kamu pahami tentang Kerajaan Islam di Nusantara?</div>
+        <textarea id="ref-1" class="refleksi-input" placeholder="Tuliskan pemahaman barumu di sini..."></textarea>
+      </div>
+      <div>
+        <div class="refleksi-q">2. Keterkaitan peristiwa lokal, nasional, atau global manakah yang menurutmu paling berkesan?</div>
+        <textarea id="ref-2" class="refleksi-input" placeholder="Tuliskan pandanganmu di sini..."></textarea>
+      </div>
+      <div style="text-align:center">
+        <div class="refleksi-q">Bagaimana perasaanmu setelah menyelesaikan pembelajaran ini?</div>
+        <div class="refleksi-skala">
+          <button class="refleksi-star-btn ${bintangRefleksi===1?'sel':''}" onclick="setStar(1)">⭐ 1 Sad</button>
+          <button class="refleksi-star-btn ${bintangRefleksi===3?'sel':''}" onclick="setStar(3)">⭐⭐ 3 Ok</button>
+          <button class="refleksi-star-btn ${bintangRefleksi===5?'sel':''}" onclick="setStar(5)">⭐⭐⭐ 5 Senang!</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function setStar(n){ play('klik'); bintangRefleksi = n; renderRefleksi(); }
+
+function simpanRefleksi(){
+  play('bintang'); showConfetti();
+  document.getElementById('refleksi-content').innerHTML = `
+    <div class="akhir">
+      <h2>🎉 Jurnal Refleksi Tersimpan!</h2>
+      <div class="identitas">${infoMurid.nama} • ${infoMurid.sekolah}</div>
+      <p style="font-size:22px; margin-top:20px;">Terima kasih telah mengisi jurnal refleksi dengan jujur dan penuh semangat!</p>
+      <button class="btn btn-kuning" style="height:60px; padding:0 40px; font-size:20px; margin-top:20px;" onclick="goMenu()">☰ Kembali ke Menu</button>
+    </div>
+  `;
+}
+
+/* INIT */
+window.addEventListener('load', () => {
+  applyConfig();
+  resizeStage();
+});
+</script>
+</body>
+</html>
